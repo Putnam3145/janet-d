@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/janet-d
+janet-d.so
+janet-d.dylib
+janet-d.dll
+janet-d.a
+janet-d.lib
+janet-d-test-*
+*.exe
+*.o
+*.obj
+*.lst

@@ -1,0 +1,15 @@
+{
+	"authors": [
+		"Putnam"
+	],
+	"description": "D bindings for the Janet programming language.",
+	"license": "MIT",
+	"name": "janet-d",
+	"targetType": "library",
+	"targetPath": "lib",
+	"sourcePaths": ["janet"],
+	"importPaths": ["."],
+
+	"sourceFiles-windows-x86-dmd": ["extlib/janet.obj"],
+	"sourceFiles-linux-x86_64": ["extlib/janet.o"]
+}
