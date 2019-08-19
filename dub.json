@@ -7,9 +7,11 @@
 	"name": "janet-d",
 	"targetType": "library",
 	"targetPath": "lib",
-	"sourcePaths": ["janet"],
-	"importPaths": ["."],
-
-	"sourceFiles-windows-x86-dmd": ["extlib/janet.obj"],
+	"importPaths": [
+		".",
+		"source",
+		"source/tests"
+	],
+	"sourceFiles-windows-x86_64": ["extlib/janet.obj"],
 	"sourceFiles-linux-x86_64": ["extlib/janet.o"]
 }
