@@ -20,4 +20,5 @@ unittest
         assert(janet_dobytes(env,realFile,realFileLength,cast(const(char)*)(entry.name),&testJanet)==0,errorString);
         writeln("Success!");
     }
+    janet_deinit();
 }
