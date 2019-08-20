@@ -33,14 +33,6 @@ template defaultGetter(T)
                         !isFunction!(mixin("T."~field)))
                 {
                 case field:
-                    debug
-                    {
-                        import std.stdio : writeln;
-                        writeln(field);
-                        writeln("the value is: ");
-                        writeln(mixin("realData."~field));
-
-                    }
                     return wrap(mixin("realData."~field));
                 }
             }
