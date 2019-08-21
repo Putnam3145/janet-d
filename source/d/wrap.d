@@ -203,7 +203,6 @@ Janet wrap(K,V)(V[K] arr)
 
 unittest
 {
-    // This test is failing right now, apparently at the wrapping step.
     janet_init();
     scope(exit) janet_deinit();
     const string foo = "foo";
@@ -214,4 +213,5 @@ unittest
     janet_def(env,toStringz("foo"),janetFoo,"A simple string, which should say 'foo'.");
     const auto janetedString = getFromJanet!string(wrap(foo));
     assert(janetedString == foo,janetedString~" is not "~foo~". This is likely caused by compiling with wrong settings (turn nanboxing off!)");
+
 }
