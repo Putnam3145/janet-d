@@ -142,7 +142,6 @@ unittest
         string b;
         Bar bar;
     }
-    import std.stdio : writeln;
     import std.file;
     import std.parallelism : task;
     auto fileTask = task!read("./source/tests/dtests/register.janet");
@@ -162,7 +161,6 @@ unittest
     import std.string : toStringz;
     janet_def(env,toStringz("abstractTest"),wrap(abstractInstance),toStringz("abstractTest"));
     Janet* j;
-    writeln("Abstract test:");
     Janet testJanet;
     const ubyte[] file = cast(const(ubyte[]))(fileTask.spinForce);
     const(ubyte)* realFile = cast(const(ubyte)*)file;
