@@ -212,7 +212,6 @@ unittest
     auto janetFoo = wrap(foo);
     import std.string : toStringz;
     janet_def(env,toStringz("foo"),janetFoo,"A simple string, which should say 'foo'.");
-    janet_dostring(env,`(print "Foo is: " foo)`,"",j);
     const auto janetedString = getFromJanet!string(wrap(foo));
     assert(janetedString == foo,janetedString~" is not "~foo~". This is likely caused by compiling with wrong settings (turn nanboxing off!)");
 }
