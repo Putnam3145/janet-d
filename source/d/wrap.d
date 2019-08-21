@@ -13,7 +13,9 @@ string fromJanetString(Janet janet)
 {
     import std.string : fromStringz;
     const auto unwrapped = janet_unwrap_string(janet);
+    debug import std.stdio;
     const(char)* charArray = cast(const(char)*)(unwrapped);
+    debug writeln(*charArray);
     return cast(string)fromStringz(charArray);
 }
 
@@ -128,7 +130,7 @@ T getFromJanet(T)(Janet janet)
     {
         return janet_unwrap_cfunction(janet);
     }
-    static if(isPointer!T)
+    else static if(isPointer!T)
     {
         return cast(T)(janet_unwrap_pointer(janet));
     }
@@ -140,6 +142,11 @@ Janet wrap(T)(T x)
     static if(is(T==void*))
     {
         return janet_wrap_abstract(x);
+    }
+    else static if(isSomeString!T)
+    {
+        import std.string : toStringz;
+        return janet_wrap_string(janet_string(cast(ubyte*)x,cast(int)x.length));
     }
     else static if(isPointer!T)
     {
@@ -156,11 +163,6 @@ Janet wrap(T)(T x)
     else static if(is(T : int))
     {
         return janet_wrap_integer(x);
-    }
-    else static if(isSomeString!T)
-    {
-        import std.string : toStringz;
-        return janet_cstringv(toStringz(x));
     }
     else static if(isArray!T)
     {
@@ -203,8 +205,16 @@ Janet wrap(K,V)(V[K] arr)
 
 unittest
 {
+    // This test is failing right now, apparently at the wrapping step.
     janet_init();
+    scope(exit) janet_deinit();
     const string foo = "foo";
+    auto env = janet_core_env(null);
+    Janet* j;
+    auto janetFoo = wrap(foo);
+    import std.string : toStringz;
+    janet_def(env,toStringz("foo"),janetFoo,"A simple string, which should say 'foo'.");
+    janet_dostring(env,`(print "Foo is: " foo)`,"",j);
     const auto janetedString = getFromJanet!string(wrap(foo));
     assert(janetedString == foo,janetedString~" is not "~foo);
 }

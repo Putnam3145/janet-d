@@ -1,0 +1,5 @@
+(import ./source/tests/helper :prefix "" :exit true)
+(assert (abstract? abstractTest) "abstractTest exists")
+(assert (= (get abstractTest :a) 5 ) "a is 5")
+(assert (= (get abstractTest :b) "foobar") "b is foobar")
+(assert (= (get (get abstractTest :bar) "foo") 10) "bar.foo is 10")

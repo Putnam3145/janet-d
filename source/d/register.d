@@ -143,16 +143,30 @@ unittest
         Bar bar;
     }
     import std.stdio : writeln;
+    import std.file;
+    import std.parallelism : task;
+    auto fileTask = task!read("./source/tests/dtests/register.janet");
+    fileTask.executeInNewThread();
     janet_init();
-    auto abstractClass = registerType!(TestClass,"Bepis");
+    scope(exit) janet_deinit();
+    auto abstractClass = registerType!(TestClass,"tests");
     auto abstractInstance = janet_abstract(abstractClass,__traits( classInstanceSize,TestClass));
     TestClass baz = cast(TestClass) abstractInstance;
     baz.a = 5;
     baz.b = "foobar";
     baz.bar.foo = 10;
+    assert(baz.a == 5);
+    assert(baz.b == "foobar");
+    assert(baz.bar.foo == 10);
     auto env = janet_core_env(null);
-    pragma(msg,__traits( classInstanceSize,TestClass));
-    janet_def(env,"bepis",wrap(abstractInstance),"bepis");
+    import std.string : toStringz;
+    janet_def(env,toStringz("abstractTest"),wrap(abstractInstance),toStringz("abstractTest"));
     Janet* j;
-    assert(janet_dostring(env,"(print (get bepis :a)) (print (get bepis :b)) (print (get bepis :bar)) (print bepis)","",j),"Abstract class errored!");
+    writeln("Abstract test:");
+    Janet testJanet;
+    const ubyte[] file = cast(const(ubyte[]))(fileTask.spinForce);
+    const(ubyte)* realFile = cast(const(ubyte)*)file;
+    int realFileLength = cast(int)(file.length);
+    assert(janet_dobytes(env,realFile,realFileLength,
+        cast(const(char)*)("./source/tests/dtests/register.janet"),&testJanet)==0,"Abstract test errored!");
 }

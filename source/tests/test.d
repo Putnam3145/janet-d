@@ -7,8 +7,9 @@ unittest
     import std.parallelism;
     // run the examples in parallel
     janet_init();
+    scope(exit) janet_deinit();
     auto env = janet_core_env(null);
-    foreach(DirEntry entry;dirEntries("./source/tests/","*.janet",SpanMode.depth))
+    foreach(DirEntry entry;dirEntries("./source/tests/","*.janet",SpanMode.shallow))
     {
         Janet testJanet;
         const ubyte[] file = cast(const(ubyte[]))read(entry.name);
@@ -17,5 +18,4 @@ unittest
         auto errorString = entry.name~" errored!";
         assert(janet_dobytes(env,realFile,realFileLength,cast(const(char)*)(entry.name),&testJanet)==0,errorString);
     }
-    janet_deinit();
 }
