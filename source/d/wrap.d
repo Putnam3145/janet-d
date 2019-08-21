@@ -13,9 +13,7 @@ string fromJanetString(Janet janet)
 {
     import std.string : fromStringz;
     const auto unwrapped = janet_unwrap_string(janet);
-    debug import std.stdio;
     const(char)* charArray = cast(const(char)*)(unwrapped);
-    debug writeln(*charArray);
     return cast(string)fromStringz(charArray);
 }
 
@@ -216,5 +214,5 @@ unittest
     janet_def(env,toStringz("foo"),janetFoo,"A simple string, which should say 'foo'.");
     janet_dostring(env,`(print "Foo is: " foo)`,"",j);
     const auto janetedString = getFromJanet!string(wrap(foo));
-    assert(janetedString == foo,janetedString~" is not "~foo);
+    assert(janetedString == foo,janetedString~" is not "~foo~". This is likely caused by compiling with wrong settings (turn nanboxing off!)");
 }
