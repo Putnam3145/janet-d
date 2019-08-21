@@ -11,7 +11,7 @@ private template isInternal(string field) // grabbed up from LuaD
 
 import std.traits : hasStaticMember,isFunction;
 
-template defaultGetter(T)
+private template defaultGetter(T)
 {
     alias GetterFunc = Janet function (void* data, Janet key);
     extern(C) Janet getterFunc(void* data, Janet key)
@@ -43,7 +43,7 @@ template defaultGetter(T)
     auto defaultGetter = &getterFunc;
 }
 
-template defaultPut(T)
+private template defaultPut(T)
 {
     extern(C) void defaultPutFunc(void* data, Janet key, Janet value)
     {
@@ -76,7 +76,29 @@ template defaultPut(T)
     }
     auto defaultPut = &defaultPutFunc;
 }
+/** Allows one to register a JanetAbstractType with Janet.
+    The returned object can be used as an argument for the janet_abstract function, which will return a void*.
+    This void* can be safely(?) cast to T (TODO: prove safety, make function to ensure it if so).
+    This process may be made easier in a later version.
 
+    A registered class looks for the following functions:
+
+        Janet __janetGet(void* data,Janet key)
+
+        void __janetPut(void* data,Janet key,Janet value)
+
+        void __janetMarshal (void* p, JanetMarshalContext* ctx)
+
+        void __janetUnmarshal (void* p, JanetMarshalContext* ctx)
+
+        void __janetTostring (void* p, JanetBuffer* buffer)
+
+        int __janetGC (void* data, size_t len)
+
+        int __janetGCMark (void* data, size_t len)
+
+    All of these are optional; get and put will have defaults applied (see the source code for info) if none is defined.
+*/
 const(JanetAbstractType)* registerType(T,string pack="")()
     if(is(T == class))
 {

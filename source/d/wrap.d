@@ -8,7 +8,7 @@ private template isInternal(string field) // grabbed up from LuaD
 }
 
 import std.traits : isSomeString,isArray,isAssociativeArray,isPointer;
-
+/// Converts a Janet string to a D string.
 string fromJanetString(Janet janet)
 {
     import std.string : fromStringz;
@@ -16,7 +16,7 @@ string fromJanetString(Janet janet)
     const(char)* charArray = cast(const(char)*)(unwrapped);
     return cast(string)fromStringz(charArray);
 }
-
+/// Returns true if the Janet argument's type is compatible with the template type. Used for type checking at runtime.
 bool janetCompatible(T)(Janet janet)
 {
     static if(is(T : double) || is(T : int))
@@ -64,7 +64,8 @@ bool janetCompatible(T)(Janet janet)
         return false;
     }
 }
-
+/** Converts from a Janet object to an object of the given type.
+    Does absolutely no checking on its own! You must check or ensure that it will never coerce to an invalid type yourself.*/
 T getFromJanet(T)(Janet janet)
 {
     static if(is(T : int))
@@ -105,7 +106,7 @@ T getFromJanet(T)(Janet janet)
     }
     else static if(is(T == class))
     {
-        return cast(T*)(janet_unwrap_abstract(janet)); // NOTE : we're assuming you're checking properly here.
+        return cast(T*)(janet_unwrap_abstract(janet));
     }
     else static if(is(T == struct))
     {
@@ -134,7 +135,10 @@ T getFromJanet(T)(Janet janet)
     }
 }
 
-
+/**
+    Wraps a D value to a Janet value.
+    Works for a bunch of built-in types as well as structs; for classes, see register.d.
+*/
 Janet wrap(T)(T x)
 {
     static if(is(T==void*))
@@ -191,6 +195,7 @@ Janet wrap(T)(T x)
     }
     static assert("Not a compatible type for janet wrap!");
 }
+/// ditto
 Janet wrap(K,V)(V[K] arr)
 {
     JanetTable* tbl = janet_table(arr.length);
@@ -213,5 +218,4 @@ unittest
     janet_def(env,toStringz("foo"),janetFoo,"A simple string, which should say 'foo'.");
     const auto janetedString = getFromJanet!string(wrap(foo));
     assert(janetedString == foo,janetedString~" is not "~foo~". This is likely caused by compiling with wrong settings (turn nanboxing off!)");
-
 }
