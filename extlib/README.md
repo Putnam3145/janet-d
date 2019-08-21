@@ -1,0 +1,1 @@
+This is where you put the compiled C file--just compile janet.c for your target architecture with JANET_NO_NANBOX defined and you're set. I may provide them later, when this is more stable, but for now if you want to use it you have to compile your own.
