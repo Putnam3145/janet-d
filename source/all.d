@@ -1,1 +1,3 @@
-public import janet.c;
+module janet.all;
+
+public import janet.d;

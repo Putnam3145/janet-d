@@ -3,3 +3,4 @@
 (assert (= (get abstractTest :a) 5 ) "a is 5")
 (assert (= (get abstractTest :b) "foobar") "b is foobar")
 (assert (= (get (get abstractTest :bar) "foo") 10) "bar.foo is 10")
+(assert (= ((get abstractTest :testFunc) 2) 4) "bar.testFunc(2) is 4")

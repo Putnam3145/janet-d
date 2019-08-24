@@ -2,7 +2,7 @@ module janet.register;
 
 import janet.c;
 
-import janet.wrap;
+import janet.d;
 
 private template isInternal(string field) // grabbed up from LuaD
 {
@@ -29,11 +29,18 @@ private template defaultGetter(T)
             {
                 static if(!isInternal!field &&
                         field != "this" &&
-                        field != "Monitor" &&
-                        !isFunction!(mixin("T."~field)))
+                        field != "Monitor")
                 {
-                case field:
-                    return wrap(mixin("realData."~field));
+                    static if(isFunction!(mixin("T."~field)))
+                    {
+                        case field:
+                            return janetWrap(makeJanetCFunc!(mixin("realData."~field))(&mixin("realData."~field)));
+                    }
+                    else
+                    {
+                        case field:
+                            return janetWrap(mixin("realData."~field));
+                    }
                 }
             }
                 default:
@@ -77,41 +84,56 @@ private template defaultPut(T)
     auto defaultPut = &defaultPutFunc;
 }
 /** Allows one to register a JanetAbstractType with Janet.
+
     The returned object can be used as an argument for the janet_abstract function, which will return a void*.
+
     This void* can be safely(?) cast to T (TODO: prove safety, make function to ensure it if so).
+
+    One can add static string to the class by the name of "janetPackage", which will be prepended to its class name in Janet before a '/'.
+
+    For example: register class "Bar" with janetPackage "Foo" will result in "Foo/Bar".
+
     This process may be made easier in a later version.
 
     A registered class looks for the following functions:
 
-        Janet __janetGet(void* data,Janet key)
-
-        void __janetPut(void* data,Janet key,Janet value)
-
-        void __janetMarshal (void* p, JanetMarshalContext* ctx)
-
-        void __janetUnmarshal (void* p, JanetMarshalContext* ctx)
-
-        void __janetTostring (void* p, JanetBuffer* buffer)
-
-        int __janetGC (void* data, size_t len)
-
-        int __janetGCMark (void* data, size_t len)
-
+    - Janet __janetGet(void* data,Janet key)
+    
+    - void __janetPut(void* data,Janet key,Janet value)
+    
+    - void __janetMarshal (void* p, JanetMarshalContext* ctx)
+    
+    - void __janetUnmarshal (void* p, JanetMarshalContext* ctx)
+    
+    - void __janetTostring (void* p, JanetBuffer* buffer)
+    
+    - int __janetGC (void* data, size_t len)
+    
+    - int __janetGCMark (void* data, size_t len)
+    
     All of these are optional; get and put will have defaults applied (see the source code for info) if none is defined.
+
 */
-const(JanetAbstractType)* registerType(T,string pack="")()
+const(JanetAbstractType)* registerType(T)()
     if(is(T == class))
 {
     JanetAbstractType* newType = new JanetAbstractType;
-    static if(pack!="")
+    import std.string : toStringz;
+    static if(hasStaticMember!(T,"janetPackage"))
     {
-        newType.name = cast(const(char)*)(pack~"/"~T.stringof);
+        newType.name = cast(const(char)*)toStringz(T.janetPackage~"/"~T.stringof);
     }
     else
     {
-        newType.name = cast(const(char)*)(T.stringof);
+        newType.name = cast(const(char)*)toStringz(T.stringof);
     }
-    pragma(msg,T.stringof~" registered!");
+    {
+        const auto existingType = janet_get_abstract_type(janet_csymbolv(newType.name));
+        if(existingType)
+        {
+            return existingType;
+        }
+    }
     static if(hasStaticMember!(T,"__janetGet"))
     {
         newType.get = &T.__janetGet;
@@ -160,33 +182,46 @@ unittest
     }
     class TestClass
     {
+        static string janetPackage="tests";
         int a;
         string b;
         Bar bar;
+        int testFunc(int b)
+        {
+            return b + 2;
+        }
     }
     import std.file;
     import std.parallelism : task;
     auto fileTask = task!read("./source/tests/dtests/register.janet");
     fileTask.executeInNewThread();
-    janet_init();
+    initJanet();
     scope(exit) janet_deinit();
-    auto abstractClass = registerType!(TestClass,"tests");
-    auto abstractInstance = janet_abstract(abstractClass,__traits( classInstanceSize,TestClass));
-    TestClass baz = cast(TestClass) abstractInstance;
+    TestClass baz = new TestClass();
     baz.a = 5;
     baz.b = "foobar";
     baz.bar.foo = 10;
+    auto abstractInstance = janetWrap(baz);
     assert(baz.a == 5);
     assert(baz.b == "foobar");
     assert(baz.bar.foo == 10);
-    auto env = janet_core_env(null);
     import std.string : toStringz;
-    janet_def(env,toStringz("abstractTest"),wrap(abstractInstance),toStringz("abstractTest"));
+    janet_def(coreEnv,toStringz("abstractTest"),abstractInstance,toStringz("abstractTest"));
     Janet* j;
     Janet testJanet;
     const ubyte[] file = cast(const(ubyte[]))(fileTask.spinForce);
     const(ubyte)* realFile = cast(const(ubyte)*)file;
     int realFileLength = cast(int)(file.length);
-    assert(janet_dobytes(env,realFile,realFileLength,
+    assert(janet_dobytes(coreEnv,realFile,realFileLength,
         cast(const(char)*)("./source/tests/dtests/register.janet"),&testJanet)==0,"Abstract test errored!");
+    // SECOND TEST: SAFETY: currently a failure, with an access violation. Must make wrapping abstracts safe.
+    import std.stdio : writeln;
+    foreach(int i;0..1000)
+    {
+        writeln(i, "test starting");
+        TestClass boo = new TestClass();
+        writeln(i,"test class allocated ",cast(void*)boo);
+        auto abst = janetWrap(boo);
+        writeln(i, "wrapped and given a head ", &abst);
+    }
 }

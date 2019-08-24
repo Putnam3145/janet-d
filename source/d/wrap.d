@@ -19,13 +19,13 @@ string fromJanetString(Janet janet)
 /// Returns true if the Janet argument's type is compatible with the template type. Used for type checking at runtime.
 bool janetCompatible(T)(Janet janet)
 {
-    static if(is(T : double) || is(T : int))
-    {
-        return janet.type == JanetType.JANET_NUMBER;
-    }
-    else static if(is(T == bool))
+    static if(is(T == bool))
     {
         return janet.type == JanetType.JANET_BOOLEAN;
+    }
+    else static if(is(T : double) || is(T : int))
+    {
+        return janet.type == JanetType.JANET_NUMBER;
     }
     else static if(is(T == JanetFiber*))
     {
@@ -64,21 +64,27 @@ bool janetCompatible(T)(Janet janet)
         return false;
     }
 }
+
+bool janetCompatible(T)(T x,Janet janet)
+{
+    return janetCompatible!(T)(janet);
+}
+
 /** Converts from a Janet object to an object of the given type.
     Does absolutely no checking on its own! You must check or ensure that it will never coerce to an invalid type yourself.*/
-T getFromJanet(T)(Janet janet)
+@system T getFromJanet(T)(Janet janet)
 {
-    static if(is(T : int))
+    static if(is(T == bool))
+    {
+        return cast(bool)janet_unwrap_boolean(janet);
+    }
+    else static if(is(T : int))
     {
         return janet_unwrap_integer(janet);
     }
     else static if(is(T : double))
     {
         return janet_unwrap_number(janet);
-    }
-    else static if(is(T == bool))
-    {
-        return cast(bool)janet_unwrap_boolean(janet);
     }
     else static if(is(T == JanetFiber*))
     {
@@ -106,7 +112,7 @@ T getFromJanet(T)(Janet janet)
     }
     else static if(is(T == class))
     {
-        return cast(T*)(janet_unwrap_abstract(janet));
+        return cast(T)(janet_unwrap_abstract(janet));
     }
     else static if(is(T == struct))
     {
@@ -139,16 +145,48 @@ T getFromJanet(T)(Janet janet)
     Wraps a D value to a Janet value.
     Works for a bunch of built-in types as well as structs; for classes, see register.d.
 */
-Janet wrap(T)(T x)
+Janet janetWrap(T,string strType = "string")(T x)
 {
-    static if(is(T==void*))
+    static if(is(T==Janet))
+    {
+        return x;
+    }
+    else static if(is(T == bool))
+    {
+        return janet_wrap_boolean(x);
+    }
+    else static if(is(T==void*))
     {
         return janet_wrap_abstract(x);
+    }
+    else static if(is(T == JanetCFunction))
+    {
+        return janet_wrap_cfunction(x);
     }
     else static if(isSomeString!T)
     {
         import std.string : toStringz;
-        return janet_wrap_string(janet_string(cast(ubyte*)x,cast(int)x.length));
+        final switch(strType)
+        {
+            case "string":
+                return janet_wrap_string(janet_string(cast(ubyte*)x,cast(int)x.length));
+            case "symbol":
+                return janet_wrap_symbol(janet_string(cast(ubyte*)x,cast(int)x.length));
+            case "keyword":
+                return janet_wrap_keyword(janet_string(cast(ubyte*)x,cast(int)x.length));
+        }
+    }
+    else static if(is(T==const(char)*))
+    {
+        final switch(strType)
+        {
+            case "string":
+                return janet_wrap_string(janet_cstring(x));
+            case "symbol":
+                return janet_wrap_symbol(janet_cstring(x));
+            case "keyword":
+                return janet_wrap_keyword(janet_cstring(x));
+        }
     }
     else static if(isPointer!T)
     {
@@ -157,10 +195,6 @@ Janet wrap(T)(T x)
     else static if(is(T : double))
     {
         return janet_wrap_number_safe(x);
-    }
-    else static if(is(T : bool))
-    {
-        return janet_wrap_boolean(x);
     }
     else static if(is(T : int))
     {
@@ -187,35 +221,55 @@ Janet wrap(T)(T x)
                 enum isMemberFunction = mixin("is(typeof(&x." ~ field ~ ") == delegate)"); //LuaD
                 static if(!isMemberFunction)
                 {
-                    janet_table_put(tbl,wrap(field),mixin("wrap(x."~field~")"));
+                    janet_table_put(tbl,janetWrap(field),mixin("janetWrap(x."~field~")"));
                 }
             }
         }
         return janet_wrap_table(tbl);
     }
+    else static if(is(T == class))
+    {
+        import janet.register : registerType;
+        //we're not using the GC here so we do the offset stuff manually... which is highly unsafe. annoying.
+        //seriously i think this might cause problems in the future. it's baffling that i might be doing this.
+        //for reference, janet_abstract_head(cast(void*)x) makes a janet_abstract_head object... a few bytes BEFORE the pointer.
+        //so if there's anything in the way, it'll just... overwrite it, i guess? it's not good.
+        //Upon further testing, this will fail after exactly 500 runs, without fail. This is not good.
+        auto abstractHead=janet_abstract_head(cast(void*)x);
+        abstractHead.type = registerType!T;
+        abstractHead.size = __traits(classInstanceSize,T);
+        return janet_wrap_abstract(cast(void*)x);
+    }
     static assert("Not a compatible type for janet wrap!");
 }
+
+Janet janetWrap(alias func)()
+{
+    import janet.func : makeJanetCFunc;
+    return wrap(makeJanetCFunc!func);
+}
+
 /// ditto
-Janet wrap(K,V)(V[K] arr)
+Janet janetWrap(K,V)(V[K] arr)
 {
     JanetTable* tbl = janet_table(arr.length);
     foreach(K key,V value; arr)
     {
-        janet_table_put(arr,wrap(key),wrap(value));
+        janet_table_put(arr,janetWrap(key),wrjanetWrapap(value));
     }
     return janet_wrap_table(arr);
 }
 
 unittest
 {
-    janet_init();
+    import janet.vm : initJanet, coreEnv;
+    initJanet();
     scope(exit) janet_deinit();
     const string foo = "foo";
-    auto env = janet_core_env(null);
     Janet* j;
-    auto janetFoo = wrap(foo);
+    auto janetFoo = janetWrap(foo);
     import std.string : toStringz;
-    janet_def(env,toStringz("foo"),janetFoo,"A simple string, which should say 'foo'.");
-    const auto janetedString = getFromJanet!string(wrap(foo));
+    janet_def(coreEnv,toStringz("foo"),janetFoo,"A simple string, which should say 'foo'.");
+    const auto janetedString = getFromJanet!string(janetWrap(foo));
     assert(janetedString == foo,janetedString~" is not "~foo~". This is likely caused by compiling with wrong settings (turn nanboxing off!)");
 }

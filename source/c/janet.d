@@ -190,7 +190,7 @@ enum JanetFiberStatus
 /* Prefixed Janet types */
 
 /* Other structs */
-alias JanetCFunction = Janet function (int argc, Janet* argv);
+alias JanetCFunction = extern(C) Janet function (int, Janet*);
 
 /* Basic types for all Janet Values */
 enum JanetType
