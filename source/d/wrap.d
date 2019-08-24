@@ -2,6 +2,8 @@ module janet.wrap;
 
 import janet.c;
 
+import janet.d : JanetDAbstractHead;
+
 private template isInternal(string field) // grabbed up from LuaD
 {
 	enum isInternal = field.length >= 2 && field[0..2] == "__";
@@ -229,16 +231,12 @@ Janet janetWrap(T,string strType = "string")(T x)
     }
     else static if(is(T == class))
     {
-        import janet.register : registerType;
         //we're not using the GC here so we do the offset stuff manually... which is highly unsafe. annoying.
         //seriously i think this might cause problems in the future. it's baffling that i might be doing this.
         //for reference, janet_abstract_head(cast(void*)x) makes a janet_abstract_head object... a few bytes BEFORE the pointer.
         //so if there's anything in the way, it'll just... overwrite it, i guess? it's not good.
         //Upon further testing, this will fail after exactly 500 runs, without fail. This is not good.
-        auto abstractHead=janet_abstract_head(cast(void*)x);
-        abstractHead.type = registerType!T;
-        abstractHead.size = __traits(classInstanceSize,T);
-        return janet_wrap_abstract(cast(void*)x);
+        return janet_wrap_abstract(new JanetDAbstractHead!(T)(x).ptr);
     }
     static assert("Not a compatible type for janet wrap!");
 }

@@ -22,7 +22,15 @@ private template defaultGetter(T)
         }
         import std.string : fromStringz;
         string keyStr = fromJanetString(key);
-        T realData = cast(T)data;
+        /*
+            While it's fresh in my mind:
+            the void* passed in is a pointer to a JanetDAbstractHead!T's data member,
+            which is a union of a long[] and an object of class T.
+            As objects of classes are pass-by-reference, this object is actually a pointer, and can be accessed as such with a void*.
+            Since we know that the data at the union is a memory address, we can convert it to a void**, then treat the data there
+            as an object of class T.
+        */
+        T realData = cast(T)*(cast(void**)data);
         switch(keyStr)
         {
             static foreach(field; __traits(allMembers,T))
@@ -197,6 +205,8 @@ unittest
     fileTask.executeInNewThread();
     initJanet();
     scope(exit) janet_deinit();
+    import std.stdio : writeln;
+    writeln("Performing class register test.");
     TestClass baz = new TestClass();
     baz.a = 5;
     baz.b = "foobar";
@@ -218,10 +228,7 @@ unittest
     import std.stdio : writeln;
     foreach(int i;0..1000)
     {
-        writeln(i, "test starting");
         TestClass boo = new TestClass();
-        writeln(i,"test class allocated ",cast(void*)boo);
         auto abst = janetWrap(boo);
-        writeln(i, "wrapped and given a head ", &abst);
     }
 }

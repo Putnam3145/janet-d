@@ -111,6 +111,8 @@ unittest
     fileTask.executeInNewThread();
     initJanet();
     scope(exit) janet_deinit();
+    import std.stdio : writeln;
+    writeln("Performing CFunction register test.");
     registerFunctionWithJanet!foo();
     registerFunctionWithJanet!bar();
     Janet* j;
