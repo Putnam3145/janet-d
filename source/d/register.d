@@ -67,7 +67,7 @@ private template defaultPut(T)
             return;
         }
         string keyStr = key.fromJanetString;
-        T realData = cast(T)data;
+        T realData = cast(T)*(cast(void**)data);
         switch(keyStr)
         {
             static foreach(field; __traits(allMembers,T))
