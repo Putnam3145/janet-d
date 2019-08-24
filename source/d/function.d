@@ -121,4 +121,5 @@ unittest
     int realFileLength = cast(int)(file.length);
     assert(janet_dobytes(coreEnv,realFile,realFileLength,
         cast(const(char)*)("./source/tests/dtests/function.janet"),j)==0,"CFunction register test errored!");
+    writeln("Success.");
 }

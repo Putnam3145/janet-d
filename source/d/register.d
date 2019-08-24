@@ -224,11 +224,12 @@ unittest
     int realFileLength = cast(int)(file.length);
     assert(janet_dobytes(coreEnv,realFile,realFileLength,
         cast(const(char)*)("./source/tests/dtests/register.janet"),&testJanet)==0,"Abstract test errored!");
-    // SECOND TEST: SAFETY: currently a failure, with an access violation. Must make wrapping abstracts safe.
-    import std.stdio : writeln;
-    foreach(int i;0..1000)
+    writeln("Success.");
+    writeln("Performing class wrapping access violation test.");
+    foreach(int i;0..10000)
     {
         TestClass boo = new TestClass();
         auto abst = janetWrap(boo);
     }
+    writeln("Success.");
 }
