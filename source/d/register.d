@@ -30,7 +30,7 @@ private template defaultGetter(T)
             Since we know that the data at the union is a memory address, we can convert it to a void**, then treat the data there
             as an object of class T.
         */
-        T realData = cast(T)*(cast(void**)data);
+        T realData = cast(T)*(cast(void**)data); //TODO: figure out a way to do this that isn't so onerous
         switch(keyStr)
         {
             static foreach(field; __traits(allMembers,T))
