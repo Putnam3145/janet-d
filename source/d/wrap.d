@@ -2,7 +2,7 @@ module janet.wrap;
 
 import janet.c;
 
-import janet.d : JanetDAbstractHead;
+import janet.d : JanetDAbstractHead, JanetStrType;
 
 private template isInternal(string field) // grabbed up from LuaD
 {
@@ -149,8 +149,19 @@ T getFromJanet(T,JanetStrType strType = JanetStrType.STRING)(Janet* janet)
     }
     else static if(isSomeString!T)
     {
-        import std.string : assumeUTF;
-        return cast(T)(fromJanetString(janet));
+        final switch(strType)
+        {
+            import std.traits : EnumMembers;
+            static foreach(t;EnumMembers!JanetStrType)
+            {
+                case t:
+                    if(!janet_checktype(janet,mixin("JanetType.JANET_"~__traits(identifier,EnumMembers!JanetStrType[t]))))
+                    {
+                        janet_panic_type(*janet,0,mixin("JANET_TFLAG_"~__traits(identifier,EnumMembers!JanetStrType[t])));
+                    }
+                    return cast(T)(fromJanetString(janet));
+            }
+        }
     }
     else static if(is(T == struct))
     {
@@ -169,14 +180,6 @@ T getFromJanet(T,JanetStrType strType = JanetStrType.STRING)(Janet* janet)
         }
         return newStruct;
     }
-}
-
-/// An enum of the different kinds of things you can turn a string into.
-enum JanetStrType
-{
-    STRING,
-    SYMBOL,
-    KEYWORD
 }
 
 /**

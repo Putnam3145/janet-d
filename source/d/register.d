@@ -16,12 +16,8 @@ private template defaultGetter(T)
     alias GetterFunc = Janet function (void* data, Janet key);
     extern(C) Janet getterFunc(void* data, Janet key)
     {
-        if(key.type != JanetType.JANET_KEYWORD && key.type != JanetType.JANET_STRING)
-        {
-            return janet_wrap_nil();
-        }
         import std.string : fromStringz;
-        string keyStr = key.getFromJanet!string;
+        string keyStr = (&key).getFromJanet!(string,JanetStrType.KEYWORD);
         /*
             While it's fresh in my mind:
             the void* passed in is a pointer to a JanetDAbstractHead!T's data member,
@@ -62,11 +58,7 @@ private template defaultPut(T)
 {
     extern(C) void defaultPutFunc(void* data, Janet key, Janet value)
     {
-        if(key.type != JanetType.JANET_KEYWORD && key.type != JanetType.JANET_STRING)
-        {
-            return;
-        }
-        string keyStr = key.getFromJanet!string;
+        string keyStr = (&key).getFromJanet!(string,JanetStrType.KEYWORD);
         T realData = cast(T)*(cast(void**)data);
         switch(keyStr)
         {

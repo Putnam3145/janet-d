@@ -12,6 +12,14 @@ public import janet.register;
 
 import janet.c;
 
+/// An enum of the different kinds of things you can turn a string into.
+enum JanetStrType
+{
+    STRING,
+    SYMBOL,
+    KEYWORD
+}
+
 package struct JanetDAbstractHead(T)
     if(is(T == class))
 {

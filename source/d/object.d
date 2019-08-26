@@ -18,7 +18,7 @@ struct JanetObject
     {
         janet = janetWrap(x);
     }
-    T as(T)() /// Coerces the Janet object to a D object of this type. Make sure it's compatible (see below)!
+    T as(T)() /// Gets the janet object as this type. Does proper checking for most types, but some (strings) need to be checked!
     {
         return getFromJanet!T(janet);
     }
