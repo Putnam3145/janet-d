@@ -145,7 +145,10 @@ T getFromJanet(T,JanetStrType strType = JanetStrType.STRING)(Janet* janet)
     import janet.register : registerType;
     static if(is(T==class))
     {
-        return cast(T)(janet_getabstract(janet,0,registerType!T));
+        // this assumes that wrap has previously been used to make the abstract.
+        // abstract objects initialized in janet must be gotten in a different way.
+        // i'll probably figure it out eventually, really.
+        return cast(T)(*(cast(void**)(janet_getabstract(janet,0,registerType!T))));
     }
     else static if(isSomeString!T)
     {

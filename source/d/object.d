@@ -42,4 +42,12 @@ unittest
     testObj = true;
     assert(testObj.compatible!bool,"Object is not converted to bool correctly!");
     assert(testObj.as!bool,"Object converted to bool is not truthy!");
+    class OtherTestClass
+    {
+        int b = 3;
+    }
+    auto a = new OtherTestClass;
+    testObj = a;
+    auto c = testObj.as!OtherTestClass;
+    assert(c == a);
 }
