@@ -21,7 +21,7 @@ private template defaultGetter(T)
             return janet_wrap_nil();
         }
         import std.string : fromStringz;
-        string keyStr = fromJanetString(key);
+        string keyStr = key.getFromJanet!string;
         /*
             While it's fresh in my mind:
             the void* passed in is a pointer to a JanetDAbstractHead!T's data member,
@@ -66,7 +66,7 @@ private template defaultPut(T)
         {
             return;
         }
-        string keyStr = key.fromJanetString;
+        string keyStr = key.getFromJanet!string;
         T realData = cast(T)*(cast(void**)data);
         switch(keyStr)
         {

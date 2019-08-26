@@ -35,7 +35,6 @@ unittest
     scope(exit) janet_deinit();
     import std.stdio : writeln;
     writeln("Performing JanetObject test.");
-    scope(success) writeln("Success.");
     JanetObject testObj = JanetObject(3);
     assert(testObj.as!int == 3);
     testObj = "foo";

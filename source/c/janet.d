@@ -190,7 +190,9 @@ enum JanetFiberStatus
 /* Prefixed Janet types */
 
 /* Other structs */
-alias JanetCFunction = extern(C) Janet function (int, Janet*);
+alias JanetCFunction = Janet function (int, Janet*);
+
+@nogc: // CFunctions can't be guaranteed to be @nogc, so this goes after the definition
 
 /* Basic types for all Janet Values */
 enum JanetType
@@ -265,34 +267,34 @@ enum JANET_TFLAG_CALLABLE = JANET_TFLAG_FUNCTION | JANET_TFLAG_CFUNCTION | JANET
  * external bindings, we should prefer using the Head structs directly, and
  * use the host language to add sugar around the manipulation of the Janet types. */
 
-JanetStructHead* janet_struct_head (const(JanetKV)* st);
-JanetAbstractHead* janet_abstract_head (const(void)* abstract_);
-JanetStringHead* janet_string_head (const(ubyte)* s);
-JanetTupleHead* janet_tuple_head (const(Janet)* tuple);
+pure JanetStructHead* janet_struct_head (const(JanetKV)* st);
+pure JanetAbstractHead* janet_abstract_head (const(void)* abstract_);
+pure JanetStringHead* janet_string_head (const(ubyte)* s);
+pure JanetTupleHead* janet_tuple_head (const(Janet)* tuple);
 
 /* Some language bindings won't have access to the macro versions. */
 
-JanetType janet_type (Janet x);
-int janet_checktype (Janet x, JanetType type);
-int janet_checktypes (Janet x, int typeflags);
-int janet_truthy (Janet x);
+pure JanetType janet_type (Janet x);
+pure int janet_checktype (Janet x, JanetType type);
+pure int janet_checktypes (Janet x, int typeflags);
+pure int janet_truthy (Janet x);
 
-const(JanetKV)* janet_unwrap_struct (Janet x);
-const(Janet)* janet_unwrap_tuple (Janet x);
-JanetFiber* janet_unwrap_fiber (Janet x);
-JanetArray* janet_unwrap_array (Janet x);
-JanetTable* janet_unwrap_table (Janet x);
-JanetBuffer* janet_unwrap_buffer (Janet x);
-const(ubyte)* janet_unwrap_string (Janet x);
-const(ubyte)* janet_unwrap_symbol (Janet x);
-const(ubyte)* janet_unwrap_keyword (Janet x);
-void* janet_unwrap_abstract (Janet x);
-void* janet_unwrap_pointer (Janet x);
-JanetFunction* janet_unwrap_function (Janet x);
-JanetCFunction janet_unwrap_cfunction (Janet x);
-int janet_unwrap_boolean (Janet x);
-double janet_unwrap_number (Janet x);
-int janet_unwrap_integer (Janet x);
+pure const(JanetKV)* janet_unwrap_struct (Janet x);
+pure const(Janet)* janet_unwrap_tuple (Janet x);
+pure JanetFiber* janet_unwrap_fiber (Janet x);
+pure JanetArray* janet_unwrap_array (Janet x);
+pure JanetTable* janet_unwrap_table (Janet x);
+pure JanetBuffer* janet_unwrap_buffer (Janet x);
+pure const(ubyte)* janet_unwrap_string (Janet x);
+pure const(ubyte)* janet_unwrap_symbol (Janet x);
+pure const(ubyte)* janet_unwrap_keyword (Janet x);
+pure void* janet_unwrap_abstract (Janet x);
+pure void* janet_unwrap_pointer (Janet x);
+pure JanetFunction* janet_unwrap_function (Janet x);
+pure JanetCFunction janet_unwrap_cfunction (Janet x);
+pure int janet_unwrap_boolean (Janet x);
+pure double janet_unwrap_number (Janet x);
+pure int janet_unwrap_integer (Janet x);
 
 Janet janet_wrap_nil ();
 Janet janet_wrap_number (double x);
@@ -346,128 +348,128 @@ struct Janet
     JanetType type;
 }
 
-extern (D) auto janet_u64(T)(auto ref T x)
+pure extern (D) auto janet_u64(T)(auto ref T x)
 {
     return x.as.u64;
 }
 
-extern (D) auto janet_type(T)(auto ref T x)
+pure @safe extern (D) auto janet_type(T)(auto ref T x)
 {
     return x.type;
 }
 
-extern (D) auto janet_checktype(T0, T1)(auto ref T0 x, auto ref T1 t)
+pure @safe extern (D) auto janet_checktype(T0, T1)(auto ref T0 x, auto ref T1 t)
 {
     return x.type == t;
 }
 
-extern (D) auto janet_truthy(T)(auto ref T x)
+pure @safe extern (D) auto janet_truthy(T)(auto ref T x)
 {
     return x.type != JanetType.JANET_NIL && (x.type != JanetType.JANET_BOOLEAN || (x.as.integer & 0x1));
 }
 
-extern (D) auto janet_unwrap_struct(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_struct(T)(auto ref T x)
 {
     return cast(const(JanetKV)*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_tuple(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_tuple(T)(auto ref T x)
 {
     return cast(const(Janet)*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_fiber(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_fiber(T)(auto ref T x)
 {
     return cast(JanetFiber*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_array(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_array(T)(auto ref T x)
 {
     return cast(JanetArray*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_table(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_table(T)(auto ref T x)
 {
     return cast(JanetTable*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_buffer(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_buffer(T)(auto ref T x)
 {
     return cast(JanetBuffer*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_string(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_string(T)(auto ref T x)
 {
     return cast(const(ubyte)*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_symbol(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_symbol(T)(auto ref T x)
 {
     return cast(const(ubyte)*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_keyword(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_keyword(T)(auto ref T x)
 {
     return cast(const(ubyte)*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_abstract(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_abstract(T)(auto ref T x)
 {
     return x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_pointer(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_pointer(T)(auto ref T x)
 {
     return x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_function(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_function(T)(auto ref T x)
 {
     return cast(JanetFunction*) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_cfunction(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_cfunction(T)(auto ref T x)
 {
     return cast(JanetCFunction) x.as.pointer;
 }
 
-extern (D) auto janet_unwrap_boolean(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_boolean(T)(auto ref T x)
 {
     return x.as.u64 & 0x1;
 }
 
-extern (D) auto janet_unwrap_number(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_number(T)(auto ref T x)
 {
     return x.as.number;
 }
 
 /* End of tagged union implementation */
 
-int janet_checkint (Janet x);
-int janet_checkint64 (Janet x);
-int janet_checksize (Janet x);
+pure int janet_checkint (Janet x);
+pure int janet_checkint64 (Janet x);
+pure int janet_checksize (Janet x);
 
-extern (D) auto janet_checkintrange(T)(auto ref T x)
+pure extern (D) auto janet_checkintrange(T)(auto ref T x)
 {
     return x == cast(int) x;
 }
 
-extern (D) auto janet_checkint64range(T)(auto ref T x)
+pure extern (D) auto janet_checkint64range(T)(auto ref T x)
 {
     return x == cast(long) x;
 }
 
-extern (D) auto janet_unwrap_integer(T)(auto ref T x)
+pure extern (D) auto janet_unwrap_integer(T)(auto ref T x)
 {
     return cast(int) janet_unwrap_number(x);
 }
 
-extern (D) auto janet_wrap_integer(T)(auto ref T x)
+pure extern (D) auto janet_wrap_integer(T)(auto ref T x)
 {
     return janet_wrap_number(cast(int) x);
 }
 
-extern (D) auto janet_checktypes(T0, T1)(auto ref T0 x, auto ref T1 tps)
+pure extern (D) auto janet_checktypes(T0, T1)(auto ref T0 x, auto ref T1 tps)
 {
     return (1 << janet_type(x)) & tps;
 }
@@ -988,32 +990,32 @@ void janet_buffer_push_u64 (JanetBuffer* buffer, ulong x);
 
 enum JANET_TUPLE_FLAG_BRACKETCTOR = 0x10000;
 
-extern (D) auto janet_tuple_head(T)(auto ref T t)
+pure extern (D) auto janet_tuple_head(T)(auto ref T t)
 {
     return cast(JanetTupleHead*) cast(char*) t - offsetof(JanetTupleHead, data);
 }
 
-extern (D) auto janet_tuple_length(T)(auto ref T t)
+pure extern (D) auto janet_tuple_length(T)(auto ref T t)
 {
     return janet_tuple_head(t).length;
 }
 
-extern (D) auto janet_tuple_hash(T)(auto ref T t)
+pure extern (D) auto janet_tuple_hash(T)(auto ref T t)
 {
     return janet_tuple_head(t).hash;
 }
 
-extern (D) auto janet_tuple_sm_start(T)(auto ref T t)
+pure extern (D) auto janet_tuple_sm_start(T)(auto ref T t)
 {
     return janet_tuple_head(t).sm_start;
 }
 
-extern (D) auto janet_tuple_sm_end(T)(auto ref T t)
+pure extern (D) auto janet_tuple_sm_end(T)(auto ref T t)
 {
     return janet_tuple_head(t).sm_end;
 }
 
-extern (D) auto janet_tuple_flag(T)(auto ref T t)
+pure extern (D) auto janet_tuple_flag(T)(auto ref T t)
 {
     return janet_tuple_head(t).gc.flags;
 }
@@ -1021,21 +1023,21 @@ extern (D) auto janet_tuple_flag(T)(auto ref T t)
 Janet* janet_tuple_begin (int length);
 const(Janet)* janet_tuple_end (Janet* tuple);
 const(Janet)* janet_tuple_n (const(Janet)* values, int n);
-int janet_tuple_equal (const(Janet)* lhs, const(Janet)* rhs);
-int janet_tuple_compare (const(Janet)* lhs, const(Janet)* rhs);
+pure int janet_tuple_equal (const(Janet)* lhs, const(Janet)* rhs);
+pure int janet_tuple_compare (const(Janet)* lhs, const(Janet)* rhs);
 
 /* String/Symbol functions */
-extern (D) auto janet_string_head(T)(auto ref T s)
+pure extern (D) auto janet_string_head(T)(auto ref T s)
 {
     return cast(JanetStringHead*) cast(char*) s - offsetof(JanetStringHead, data);
 }
 
-extern (D) auto janet_string_length(T)(auto ref T s)
+pure extern (D) auto janet_string_length(T)(auto ref T s)
 {
     return janet_string_head(s).length;
 }
 
-extern (D) auto janet_string_hash(T)(auto ref T s)
+pure extern (D) auto janet_string_hash(T)(auto ref T s)
 {
     return janet_string_head(s).hash;
 }
@@ -1118,17 +1120,17 @@ extern (D) auto janet_struct_hash(T)(auto ref T t)
 JanetKV* janet_struct_begin (int count);
 void janet_struct_put (JanetKV* st, Janet key, Janet value);
 const(JanetKV)* janet_struct_end (JanetKV* st);
-Janet janet_struct_get (const(JanetKV)* st, Janet key);
+pure Janet janet_struct_get (const(JanetKV)* st, Janet key);
 JanetTable* janet_struct_to_table (const(JanetKV)* st);
-int janet_struct_equal (const(JanetKV)* lhs, const(JanetKV)* rhs);
-int janet_struct_compare (const(JanetKV)* lhs, const(JanetKV)* rhs);
+pure int janet_struct_equal (const(JanetKV)* lhs, const(JanetKV)* rhs);
+pure int janet_struct_compare (const(JanetKV)* lhs, const(JanetKV)* rhs);
 const(JanetKV)* janet_struct_find (const(JanetKV)* st, Janet key);
 
 /* Table functions */
 JanetTable* janet_table (int capacity);
 JanetTable* janet_table_init (JanetTable* table, int capacity);
 void janet_table_deinit (JanetTable* table);
-Janet janet_table_get (JanetTable* t, Janet key);
+pure Janet janet_table_get (JanetTable* t, Janet key);
 Janet janet_table_rawget (JanetTable* t, Janet key);
 Janet janet_table_remove (JanetTable* t, Janet key);
 void janet_table_put (JanetTable* t, Janet key, Janet value);
@@ -1152,17 +1154,17 @@ Janet janet_dictionary_get (const(JanetKV)* data, int cap, Janet key);
 const(JanetKV)* janet_dictionary_next (const(JanetKV)* kvs, int cap, const(JanetKV)* kv);
 
 /* Abstract */
-extern (D) auto janet_abstract_head(T)(auto ref T u)
+pure extern (D) auto janet_abstract_head(T)(auto ref T u)
 {
     return cast(JanetAbstractHead*) cast(char*) u - offsetof(JanetAbstractHead, data);
 }
 
-extern (D) auto janet_abstract_type(T)(auto ref T u)
+pure extern (D) auto janet_abstract_type(T)(auto ref T u)
 {
     return janet_abstract_head(u).type;
 }
 
-extern (D) auto janet_abstract_size(T)(auto ref T u)
+pure extern (D) auto janet_abstract_size(T)(auto ref T u)
 {
     return janet_abstract_head(u).size;
 }
@@ -1224,7 +1226,7 @@ extern (D) auto janet_flag_at(T0, T1)(auto ref T0 F, auto ref T1 I)
     return F & ((1) << I);
 }
 
-Janet janet_wrap_number_safe (double x);
+Janet janet_wrap_number_safe (double x) @trusted;
 
 /* VM functions */
 int janet_init ();
@@ -1270,33 +1272,33 @@ void janet_panic_abstract (Janet x, int n, const(JanetAbstractType)* at);
 void janet_arity (int arity, int min, int max);
 void janet_fixarity (int arity, int fix);
 
-Janet janet_getmethod (const(ubyte)* method, const(JanetMethod)* methods);
-double janet_getnumber (const(Janet)* argv, int n);
-JanetArray* janet_getarray (const(Janet)* argv, int n);
-const(Janet)* janet_gettuple (const(Janet)* argv, int n);
-JanetTable* janet_gettable (const(Janet)* argv, int n);
-const(JanetKV)* janet_getstruct (const(Janet)* argv, int n);
-const(ubyte)* janet_getstring (const(Janet)* argv, int n);
-const(char)* janet_getcstring (const(Janet)* argv, int n);
-const(ubyte)* janet_getsymbol (const(Janet)* argv, int n);
-const(ubyte)* janet_getkeyword (const(Janet)* argv, int n);
-JanetBuffer* janet_getbuffer (const(Janet)* argv, int n);
-JanetFiber* janet_getfiber (const(Janet)* argv, int n);
-JanetFunction* janet_getfunction (const(Janet)* argv, int n);
-JanetCFunction janet_getcfunction (const(Janet)* argv, int n);
-int janet_getboolean (const(Janet)* argv, int n);
-void* janet_getpointer (const(Janet)* argv, int n);
+pure @trusted Janet janet_getmethod (const(ubyte)* method, const(JanetMethod)* methods);
+pure @trusted double janet_getnumber (const(Janet)* argv, int n);
+pure @trusted JanetArray* janet_getarray (const(Janet)* argv, int n);
+pure @trusted const(Janet)* janet_gettuple (const(Janet)* argv, int n);
+pure @trusted JanetTable* janet_gettable (const(Janet)* argv, int n);
+pure @trusted const(JanetKV)* janet_getstruct (const(Janet)* argv, int n);
+pure @trusted const(ubyte)* janet_getstring (const(Janet)* argv, int n);
+pure const(char)* janet_getcstring (const(Janet)* argv, int n); // can't be @trusted -- pointer arithmetic in the C func
+pure @trusted const(ubyte)* janet_getsymbol (const(Janet)* argv, int n);
+pure @trusted const(ubyte)* janet_getkeyword (const(Janet)* argv, int n);
+pure @trusted JanetBuffer* janet_getbuffer (const(Janet)* argv, int n);
+pure @trusted JanetFiber* janet_getfiber (const(Janet)* argv, int n);
+pure @trusted JanetFunction* janet_getfunction (const(Janet)* argv, int n);
+pure @trusted JanetCFunction janet_getcfunction (const(Janet)* argv, int n);
+pure @trusted int janet_getboolean (const(Janet)* argv, int n);
+pure @trusted void* janet_getpointer (const(Janet)* argv, int n);
 
-int janet_getinteger (const(Janet)* argv, int n);
-long janet_getinteger64 (const(Janet)* argv, int n);
-size_t janet_getsize (const(Janet)* argv, int n);
-JanetView janet_getindexed (const(Janet)* argv, int n);
-JanetByteView janet_getbytes (const(Janet)* argv, int n);
-JanetDictView janet_getdictionary (const(Janet)* argv, int n);
-void* janet_getabstract (const(Janet)* argv, int n, const(JanetAbstractType)* at);
-JanetRange janet_getslice (int argc, const(Janet)* argv);
-int janet_gethalfrange (const(Janet)* argv, int n, int length, const(char)* which);
-int janet_getargindex (const(Janet)* argv, int n, int length, const(char)* which);
+pure @trusted int janet_getinteger (const(Janet)* argv, int n);
+pure @trusted long janet_getinteger64 (const(Janet)* argv, int n);
+pure @trusted size_t janet_getsize (const(Janet)* argv, int n);
+pure @trusted JanetView janet_getindexed (const(Janet)* argv, int n);
+pure @trusted JanetByteView janet_getbytes (const(Janet)* argv, int n);
+pure @trusted JanetDictView janet_getdictionary (const(Janet)* argv, int n);
+pure @trusted void* janet_getabstract (const(Janet)* argv, int n, const(JanetAbstractType)* at);
+pure @trusted JanetRange janet_getslice (int argc, const(Janet)* argv);
+pure @trusted int janet_gethalfrange (const(Janet)* argv, int n, int length, const(char)* which);
+pure @trusted int janet_getargindex (const(Janet)* argv, int n, int length, const(char)* which);
 
 Janet janet_dyn (const(char)* name);
 void janet_setdyn (const(char)* name, Janet value);
