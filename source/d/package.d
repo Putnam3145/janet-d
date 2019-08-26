@@ -20,6 +20,8 @@ enum JanetStrType
     KEYWORD
 }
 
+public import janet.c : Janet;
+
 package struct JanetDAbstractHead(T)
     if(is(T == class))
 {

@@ -7,7 +7,7 @@ import janet.d;
 /**
     A wrapper around call_janet using D-like varargs.
 */
-Janet callJanet(T...)(JanetFunction* fun,T args)
+@nogc Janet callJanet(T...)(JanetFunction* fun,T args)
 {
     Janet[T.length] wrappedArgs;
     static foreach(i,v;args)

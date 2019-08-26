@@ -22,7 +22,7 @@ struct JanetObject
     {
         return getFromJanet!T(janet);
     }
-    bool compatible(T)() /// Returns true if the janet object can be coerced into the given value.
+    pure @safe @nogc bool compatible(T)() /// Returns true if the janet object can be coerced into the given value.
     {
         return janetCompatible!T(janet);
     }
