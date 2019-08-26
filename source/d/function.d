@@ -110,7 +110,7 @@ unittest
     auto fileTask = task!read("./source/tests/dtests/function.janet");
     fileTask.executeInNewThread();
     initJanet();
-    scope(exit) janet_deinit();
+    scope(exit) deinitJanet();
     import std.stdio : writeln;
     writeln("Performing CFunction register test.");
     registerFunctionWithJanet!foo();

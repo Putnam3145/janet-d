@@ -196,7 +196,7 @@ unittest
     auto fileTask = task!read("./source/tests/dtests/register.janet");
     fileTask.executeInNewThread();
     initJanet();
-    scope(exit) janet_deinit();
+    scope(exit) deinitJanet();
     import std.stdio : writeln;
     writeln("Performing class register test.");
     TestClass baz = new TestClass();
