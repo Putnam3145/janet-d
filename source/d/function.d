@@ -9,12 +9,17 @@ import janet.d;
 */
 @nogc Janet callJanet(T...)(JanetFunction* fun,T args)
 {
-    Janet[T.length] wrappedArgs;
+    debug import std.stdio : writeln;
+    pragma(msg,T.length);
+    Janet[T.length] wrappedArgs = [];
     static foreach(i,v;args)
     {
         wrappedArgs[i]=janetWrap(v);
     }
-    return janet_call(fun,T.length,cast(const(Janet*))(wrappedArgs));
+    Janet j;
+    int result = janet_pcall(fun,T.length,cast(const(Janet*))(wrappedArgs),&j,null);
+    debug assert(result==0,"Function errored! "~j.getFromJanet!string);
+    return j;
 }
 /**
     Wraps around a function, allowing it to be called in Janet.
@@ -105,21 +110,12 @@ version(unittest)
 
 unittest
 {
-    import std.file;
-    import std.parallelism : task;
-    auto fileTask = task!read("./source/tests/dtests/function.janet");
-    fileTask.executeInNewThread();
-    initJanet();
-    scope(exit) deinitJanet();
     import std.stdio : writeln;
     writeln("Performing CFunction register test.");
     registerFunctionWithJanet!foo();
     registerFunctionWithJanet!bar();
-    Janet* j;
-    const ubyte[] file = cast(const(ubyte[]))(fileTask.spinForce);
-    const(ubyte)* realFile = cast(const(ubyte)*)file;
-    int realFileLength = cast(int)(file.length);
-    assert(janet_dobytes(coreEnv,realFile,realFileLength,
-        cast(const(char)*)("./source/tests/dtests/function.janet"),j)==0,"CFunction register test errored!");
-    writeln("Success.");
+    writeln("Functions registered.");
+    assert(doFile("./source/tests/dtests/function.janet") == 0,"Function failed!");
+    auto func = compileFile("./source/tests/dtests/function.janet");
+    Janet result = callJanet(&func);
 }

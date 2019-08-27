@@ -195,8 +195,6 @@ unittest
     import std.parallelism : task;
     auto fileTask = task!read("./source/tests/dtests/register.janet");
     fileTask.executeInNewThread();
-    initJanet();
-    scope(exit) deinitJanet();
     import std.stdio : writeln;
     writeln("Performing class register test.");
     TestClass baz = new TestClass();

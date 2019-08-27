@@ -300,9 +300,7 @@ Janet janetWrap(K,V)(V[K] arr)
 unittest
 {
     import std.stdio : writeln;
-    import janet.vm : initJanet, coreEnv, deinitJanet;
-    initJanet();
-    scope(exit) deinitJanet();
+    import janet.vm : coreEnv;
     writeln("Starting wrap test.");
     const string foo = "foo";
     Janet* j;

@@ -31,8 +31,6 @@ struct JanetObject
 ///
 unittest
 {
-    initJanet();
-    scope(exit) deinitJanet();
     import std.stdio : writeln;
     writeln("Performing JanetObject test.");
     JanetObject testObj = JanetObject(3);
