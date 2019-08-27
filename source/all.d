@@ -6,15 +6,12 @@ unittest
 {
     import std.file;
     import std.stdio;
+    import std.parallelism;
     // run the examples in parallel
-    foreach(DirEntry entry;dirEntries("./source/tests/","*.janet",SpanMode.shallow))
+    foreach(DirEntry entry;parallel(dirEntries("./source/tests/","*.janet",SpanMode.shallow),1))
     {
-        Janet testJanet;
-        const ubyte[] file = cast(const(ubyte[]))read(entry.name);
-        const(ubyte)* realFile = cast(const(ubyte)*)file;
-        int realFileLength = cast(int)(file.length);
         auto errorString = entry.name~" errored!";
-        import janet.c : janet_dobytes;
-        assert(janet_dobytes(coreEnv,realFile,realFileLength,cast(const(char)*)(entry.name),&testJanet)==0,errorString);
+        JanetObject j;
+        assert(doFile(entry.name,&(j.janet))==0,errorString~j.as!string);
     }
 }

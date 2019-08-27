@@ -18,6 +18,7 @@ import janet.d;
     }
     Janet j;
     int result = janet_pcall(fun,T.length,cast(const(Janet*))(wrappedArgs),&j,null);
+    debug writeln(result," ",j);
     debug assert(result==0,"Function errored! "~j.getFromJanet!string);
     return j;
 }
@@ -116,6 +117,4 @@ unittest
     registerFunctionWithJanet!bar();
     writeln("Functions registered.");
     assert(doFile("./source/tests/dtests/function.janet") == 0,"Function failed!");
-    auto func = compileFile("./source/tests/dtests/function.janet");
-    Janet result = callJanet(&func);
 }
