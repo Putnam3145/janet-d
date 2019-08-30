@@ -106,24 +106,26 @@ unittest
     2. It led to an inability to deinit janet on thread close because pointers returned to might
     come from thread local storage, which was unsafe and led to segfaults.
 
-    Also causing segfaults right now: parallel foreach, running doFile. I do not know why.
+    It is not recommended to use the global taskPool for janet-d. Use a specialized task pool and make sure it finishes.
 */
 
 unittest
 {
     import std.parallelism;
     import std.stdio;
+    TaskPool ourPool = new TaskPool();
     writeln("Testing parallelism (and hot-swapping, if you're fast)...");
-    foreach(int i;0..10000)
+    foreach(int i;0..1000000)
     {
         if(!(i%100))
         {
-            taskPool.put(task!hotswapFile("./source/tests/dtests/parallel.janet"));
+            ourPool.put(task!hotswapFile("./source/tests/dtests/parallel.janet"));
         }
         else
         {
-            taskPool.put(task!doFile("./source/tests/dtests/parallel.janet"));
+            ourPool.put(task!doFile("./source/tests/dtests/parallel.janet"));
         }
     }
+    ourPool.finish(true);
     writeln("Parallelism test finished.");
 }
