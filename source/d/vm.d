@@ -17,19 +17,19 @@ static ~this()
     janet_deinit();
 }
 
-private class MemoizedFile //i feel like i should make a separate package for this
+shared private class MemoizedFile //i feel like i should make a separate package for this
 {
     import core.sync.mutex;
-    shared Mutex mtx;
-    shared private string _internalContents;
+    private Mutex mtx;
+    private string _internalContents;
     private string _fileName;
-    string contents(bool refresh=false)
+    string contents(bool refresh=false)()
     {
         import std.file : readText;
-        mtx.lock_nothrow();
-        scope(exit) mtx.unlock_nothrow();
-        if(refresh)
+        static if(refresh)
         {
+            mtx.lock_nothrow();
+            scope(exit) mtx.unlock_nothrow();
             return _internalContents = readText(_fileName);
         }
         else
@@ -40,22 +40,22 @@ private class MemoizedFile //i feel like i should make a separate package for th
     this(string file)
     {
         import std.file : readText;
-        mtx = new shared Mutex(this);
+        mtx = new shared Mutex(cast()this);
         _internalContents = readText(_fileName = file);
     }
 }
 
-private MemoizedFile[string] memoizedFiles;
+private static shared(MemoizedFile)[string] memoizedFiles;
 
-private string readFile(string path)
+private string readFile(bool refresh=false)(string path)
 {
     if(path in memoizedFiles)
     {
-        return memoizedFiles[path].contents;
+        return memoizedFiles[path].contents!refresh;
     }
     else
     {
-        return (memoizedFiles[path] = new MemoizedFile(path)).contents;
+        return (memoizedFiles[path] = new shared MemoizedFile(path)).contents;
     }
 }
 
@@ -86,14 +86,12 @@ int doFile(string path, Janet* out_, JanetTable* env = coreEnv)
 /// janet-d memoizes file accesses for faster loading. This resets the memoization. Otherwise identical to doFile.
 int hotswapFile(string path,JanetTable* env = coreEnv)
 {
-    memoizedFiles.remove(path);
-    return doFile(path,env);
+    return doString(readFile!true(path),env);
 }
 /// ditto
 int hotswapFile(string path, Janet* out_, JanetTable* env = coreEnv)
 {
-    memoizedFiles.remove(path);
-    return doFile(path,out_,env);
+    return doString(readFile!true(path),out_,env);
 }
 
 ///
