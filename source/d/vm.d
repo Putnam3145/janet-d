@@ -127,7 +127,5 @@ unittest
             taskPool.put(task!doFile("./source/tests/dtests/parallel.janet"));
         }
     }
-    writeln("Pool put together.");
-    taskPool.finish(true);
-    writeln("Pool finished.");
+    writeln("Parallelism test finished.");
 }

@@ -8,7 +8,7 @@ unittest
     import std.stdio;
     import std.parallelism;
     // run the examples in parallel
-    foreach(DirEntry entry;dirEntries("./source/tests/","suite*.janet",SpanMode.shallow))
+    foreach(DirEntry entry;parallel(dirEntries("./source/tests/","suite*.janet",SpanMode.shallow),1))
     {
         const auto errorString = entry.name~" errored!";
         JanetObject j;
