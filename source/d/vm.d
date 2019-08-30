@@ -45,7 +45,7 @@ shared private class MemoizedFile //i feel like i should make a separate package
     }
 }
 
-private static shared(MemoizedFile)[string] memoizedFiles;
+private shared(MemoizedFile)[string] memoizedFiles;
 
 private string readFile(bool refresh=false)(string path)
 {
@@ -73,6 +73,11 @@ private string readFile(bool refresh=false)(string path)
     import std.string : representation;
     return janet_dobytes(env,&str.representation[0],cast(int)str.length,"",out_);
 }
+///
+unittest
+{
+    doString(`(print "doString unittest succeeded!")`);
+}
 /// Load a file and run it in the Janet VM.
 int doFile(string path,JanetTable* env = coreEnv)
 {
@@ -92,12 +97,6 @@ int hotswapFile(string path,JanetTable* env = coreEnv)
 int hotswapFile(string path, Janet* out_, JanetTable* env = coreEnv)
 {
     return doString(readFile!true(path),out_,env);
-}
-
-///
-unittest
-{
-    doString(`(print "doString unittest succeeded!")`);
 }
 
 /*
