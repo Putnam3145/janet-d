@@ -191,6 +191,11 @@ T getFromJanet(T,JanetStrType strType = JanetStrType.STRING)(Janet* janet)
 */
 @nogc Janet janetWrap(T,JanetStrType strType = JanetStrType.STRING)(T x)
 {
+    /*For the record, if I try to do operator overloading with this, I get this wonderful error:
+        source\d\function.d(40,43): Error: none of the overloads of janetWrap are callable using argument types (int), candidates are:
+        source\d\wrap.d(193,19):        janet.wrap.janetWrap(int x)
+    so if you're wondering why this is an else-static-if template even though it has one return type, that's why.
+    */
     static if(is(T==Janet))
     {
         return x;

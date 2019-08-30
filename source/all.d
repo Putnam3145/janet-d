@@ -10,7 +10,7 @@ unittest
     // run the examples in parallel
     foreach(DirEntry entry;dirEntries("./source/tests/","suite*.janet",SpanMode.shallow))
     {
-        auto errorString = entry.name~" errored!";
+        const auto errorString = entry.name~" errored!";
         JanetObject j;
         assert(doFile(entry.name,&(j.janet))==0,errorString~j.as!string);
     }
