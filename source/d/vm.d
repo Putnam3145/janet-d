@@ -19,8 +19,6 @@ static ~this()
 
 shared private class MemoizedFile //i feel like i should make a separate package for this
 {
-    import core.sync.mutex;
-    private Mutex mtx;
     private string _internalContents;
     private string _fileName;
     string contents(bool refresh=false)()
@@ -28,9 +26,10 @@ shared private class MemoizedFile //i feel like i should make a separate package
         import std.file : readText;
         static if(refresh)
         {
-            mtx.lock_nothrow();
-            scope(exit) mtx.unlock_nothrow();
-            return _internalContents = readText(_fileName);
+            synchronized
+            {
+                return _internalContents = readText(_fileName);
+            }
         }
         else
         {
@@ -40,7 +39,6 @@ shared private class MemoizedFile //i feel like i should make a separate package
     this(string file)
     {
         import std.file : readText;
-        mtx = new shared Mutex(cast()this);
         _internalContents = readText(_fileName = file);
     }
 }
