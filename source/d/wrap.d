@@ -271,7 +271,7 @@ unittest
         JanetArray* arr = janet_array(x.length);
         foreach(item; x)
         {
-            janet_array_push(arr,wrap(item));
+            janet_array_push(arr,janetWrap(item)); // TODO: write unit test that catches this
         }
         return janet_wrap_array(arr);
     }
@@ -306,7 +306,7 @@ Janet janetWrap(T)(T x)
 @nogc Janet janetWrap(alias func)()
 {
     import janet.func : makeJanetCFunc;
-    return wrap(makeJanetCFunc!func);
+    return janetWrap(makeJanetCFunc!func); // TODO: write unit test that catches this
 }
 
 /// ditto
