@@ -344,8 +344,8 @@ struct Janet
         const(void)* cpointer;
     }
 
-    _Anonymous_0 as;
-    JanetType type;
+    _Anonymous_0 as_c; /// Renamed so as not to be shadowed by the "as" template, which is preferred.
+    JanetType type; /// Prefer janetCompatible or as over this.
 }
 
 pure extern (D) auto janet_u64(T)(auto ref T x)

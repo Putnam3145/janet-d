@@ -11,7 +11,7 @@ private template isInternal(string field) // grabbed up from LuaD
 
 import std.traits : isSomeString,isArray,isAssociativeArray,isPointer;
 /// Converts a Janet string to a D string.
-string fromJanetString(Janet janet)
+@nogc string fromJanetString(Janet janet)
 {
     import std.string : fromStringz;
     const auto unwrapped = janet_unwrap_string(janet);
@@ -19,7 +19,7 @@ string fromJanetString(Janet janet)
     return cast(string)fromStringz(charArray);
 }
 /// ditto
-string fromJanetString(Janet* janet)
+@nogc string fromJanetString(Janet* janet)
 {
     import std.string : fromStringz;
     const auto unwrapped = janet_unwrap_string(*janet);
@@ -80,9 +80,16 @@ pure @safe @nogc bool janetCompatible(T)(T x,Janet janet)
     return janetCompatible!(T)(janet);
 }
 
-T getFromJanet(T)(Janet janet)
+@nogc T as(T)(Janet janet)
+    if(canBeSafelyConverted!T || isSomeString!T || is(T == struct) || isPointer!T)
 {
-    return getFromJanet!T(&janet);
+    return (&janet).as!T;
+}
+
+T as(T)(Janet janet)
+    if(is(T == class))
+{
+    return (&janet).as!T;
 }
 
 private bool canBeSafelyConverted(T)()
@@ -92,7 +99,7 @@ private bool canBeSafelyConverted(T)()
 
 /** Converts from a Janet object to an object of the given type
     A safe version of the function will be used for all types that can be safely converted.*/
-@safe @nogc T getFromJanet(T)(Janet* janet)
+@safe @nogc T as(T)(Janet* janet)
     if(canBeSafelyConverted!T)
 {
     static if(is(T == bool))
@@ -133,22 +140,12 @@ private bool canBeSafelyConverted(T)()
     }
 }
 /// ditto
-@nogc T getFromJanet(T)(Janet* janet)
-    if(isPointer!T)
+@nogc T as(T,JanetStrType strType = JanetStrType.STRING)(Janet* janet)
+    if(isPointer!T || isSomeString!T || is(T == struct))
 {
-    return cast(T)(janet_getpointer(janet));
-}
-
-T getFromJanet(T,JanetStrType strType = JanetStrType.STRING)(Janet* janet)
-    if(is(T == class) || isSomeString!T || is(T == struct))
-{
-    import janet.register : registerType;
-    static if(is(T==class))
+    static if(isPointer!T)
     {
-        // this assumes that wrap has previously been used to make the abstract.
-        // abstract objects initialized in janet must be gotten in a different way.
-        // i'll probably figure it out eventually, really.
-        return cast(T)(*(cast(void**)(janet_getabstract(janet,0,registerType!T))));
+        return cast(T)(janet_getpointer(janet,0));
     }
     else static if(isSomeString!T)
     {
@@ -175,14 +172,34 @@ T getFromJanet(T,JanetStrType strType = JanetStrType.STRING)(Janet* janet)
             JanetKV kv = tbl.data[i];
             static foreach(field; __traits(allMembers,T))
             {
-                if(getFromJanet!(typeof("T."~field))(kv.key) == field)
+                if(as!(typeof("T."~field))(kv.key) == field)
                 {
-                    mixin("newStruct."~field) = getFromJanet!(typeof(mixin("T."~field)))(kv.value);
+                    mixin("newStruct."~field) = as!(typeof(mixin("T."~field)))(kv.value);
                 }
             }
         }
         return newStruct;
     }
+}
+/// ditto
+T as(T,JanetStrType strType = JanetStrType.STRING)(Janet* janet)
+    if(is(T==class))
+{
+    // this assumes that wrap has previously been used to make the abstract.
+    // abstract objects initialized in janet must be gotten in a different way.
+    // i'll probably figure it out eventually, really.
+    // and i know that this is a terrible thing to read in comments.
+    import janet.register : registerType;
+    return cast(T)(*(cast(void**)(janet_getabstract(janet,0,registerType!T))));
+}
+
+unittest
+{
+    int r = 0;
+    int* pr = &r;
+    Janet j;
+    j = janetWrap(pr);
+    pr = (j).as!(int*);
 }
 
 /**
@@ -286,14 +303,14 @@ Janet janetWrap(T)(T x)
     return janet_wrap_abstract(new JanetDAbstractHead!(T)(x).ptr);
 }
 /// ditto
-Janet janetWrap(alias func)()
+@nogc Janet janetWrap(alias func)()
 {
     import janet.func : makeJanetCFunc;
     return wrap(makeJanetCFunc!func);
 }
 
 /// ditto
-Janet janetWrap(K,V)(V[K] arr)
+@nogc Janet janetWrap(K,V)(V[K] arr)
 {
     JanetTable* tbl = janet_table(arr.length);
     foreach(K key,V value; arr)
@@ -312,6 +329,6 @@ unittest
     auto janetFoo = janetWrap(foo);
     import std.string : toStringz;
     janet_def(coreEnv,toStringz("foo"),janetFoo,"A simple string, which should say 'foo'.");
-    const auto janetedString = getFromJanet!string(janetFoo);
+    const auto janetedString = as!string(janetFoo);
     assert(janetedString == foo,janetedString~" is not "~foo~". This is likely caused by compiling with wrong settings (turn nanboxing off!)");
 }

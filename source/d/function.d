@@ -5,21 +5,26 @@ import janet.c;
 import janet.d;
 
 /**
-    A wrapper around call_janet using D-like varargs.
+    Emulates the effects of janet_pcall using a thread-local fiber
+    and D-like varargs.
 */
 @nogc Janet callJanet(T...)(JanetFunction* fun,T args)
 {
-    debug import std.stdio : writeln;
-    pragma(msg,T.length);
     Janet[T.length] wrappedArgs = [];
     static foreach(i,v;args)
     {
         wrappedArgs[i]=janetWrap(v);
     }
     Janet j;
-    int result = janet_pcall(fun,T.length,cast(const(Janet*))(wrappedArgs),&j,null);
-    debug writeln(result," ",j);
-    debug assert(result==0,"Function errored! "~j.getFromJanet!string);
+    enum argc = T.length;
+    const(Janet*) argv = cast(const(Janet*))(wrappedArgs);
+    if(defaultFiber.isNull)
+    {
+        defaultFiber = janet_fiber(fun,128,argc,argv);
+    }
+    JanetFiber* fiber = janet_fiber_reset(defaultFiber.get,fun,argc,argv);
+    const int result = janet_continue(fiber,janet_wrap_nil(),&j);
+    debug assert(result==0,"Function errored! "~j.as!string);
     return j;
 }
 /**
@@ -35,7 +40,7 @@ template makeJanetCFunc(alias func)
         alias funcParams = Parameters!func;
         static foreach(i;0..args.length)
         {
-            args[i] = getFromJanet!(funcParams[i])(argv[i]);
+            args[i] = as!(funcParams[i])(&argv[i]);
         }
         return janetWrap!(ReturnType!func)(func(args.expand));
     }
@@ -71,7 +76,7 @@ template makeJanetCFunc(alias func,T,Args...)
         alias funcParams = Parameters!func;
         static foreach(i;0..args.length)
         {
-            args[i] = getFromJanet!(funcParams[i])(argv[i]);
+            args[i] = as!(funcParams[i])(&argv[i]);
         }
         if(dg)
         {

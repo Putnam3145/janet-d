@@ -13,18 +13,18 @@ import std.traits : hasStaticMember,isFunction;
 
 private template defaultGetter(T)
 {
-    alias GetterFunc = Janet function (void* data, Janet key);
     extern(C) Janet getterFunc(void* data, Janet key)
     {
         import std.string : fromStringz;
-        string keyStr = (&key).getFromJanet!(string,JanetStrType.KEYWORD);
+        string keyStr = (&key).as!(string,JanetStrType.KEYWORD);
         /*
             While it's fresh in my mind:
             the void* passed in is a pointer to a JanetDAbstractHead!T's data member,
             which is a union of a long[] and an object of class T.
-            As objects of classes are pass-by-reference, this object is actually a pointer, and can be accessed as such with a void*.
-            Since we know that the data at the union is a memory address, we can convert it to a void**, then treat the data there
-            as an object of class T.
+            As objects of classes are pass-by-reference, this object is actually a pointer,
+            and can be accessed as such with a void*. Since we know that the data at the union
+            is a memory address, we can convert it to a void**, then treat the double-dereferenced
+            data there as an object of class T.
         */
         T realData = cast(T)*(cast(void**)data); //TODO: figure out a way to do this that isn't so onerous
         switch(keyStr)
@@ -58,7 +58,7 @@ private template defaultPut(T)
 {
     extern(C) void defaultPutFunc(void* data, Janet key, Janet value)
     {
-        string keyStr = (&key).getFromJanet!(string,JanetStrType.KEYWORD);
+        string keyStr = (&key).as!(string,JanetStrType.KEYWORD);
         T realData = cast(T)*(cast(void**)data);
         switch(keyStr)
         {
@@ -72,7 +72,7 @@ private template defaultPut(T)
                 case field:
                     if(janetCompatible!(typeof(mixin("T."~field)))(value))
                     {
-                        mixin("realData."~field) = getFromJanet!(typeof(mixin("T."~field)))(value);
+                        mixin("realData."~field) = as!(typeof(mixin("T."~field)))(value);
                     }
                     return;
                 }
