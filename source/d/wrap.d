@@ -268,10 +268,10 @@ unittest
     }
     else static if(isArray!T)
     {
-        JanetArray* arr = janet_array(x.length);
+        JanetArray* arr = janet_array(cast(int)x.length);
         foreach(item; x)
         {
-            janet_array_push(arr,janetWrap(item)); // TODO: write unit test that catches this
+            janet_array_push(arr,janetWrap(item));
         }
         return janet_wrap_array(arr);
     }
@@ -295,6 +295,13 @@ unittest
     }
     static assert("Not a compatible type for janet wrap!");
 }
+
+unittest
+{
+    int[] arr = [1,2,3,4,5];
+    janetWrap(arr);
+}
+
 /// ditto
 Janet janetWrap(T)(T x)
     if(is(T == class))
@@ -306,7 +313,20 @@ Janet janetWrap(T)(T x)
 @nogc Janet janetWrap(alias func)()
 {
     import janet.func : makeJanetCFunc;
-    return janetWrap(makeJanetCFunc!func); // TODO: write unit test that catches this
+    return janetWrap(makeJanetCFunc!func);
+}
+
+version(unittest)
+{
+    int baz(int a)
+    {
+        return a+1;
+    }
+}
+
+unittest
+{
+    janetWrap!baz;
 }
 
 /// ditto
