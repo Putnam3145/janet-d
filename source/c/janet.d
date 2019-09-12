@@ -296,7 +296,7 @@ pure int janet_unwrap_boolean (Janet x);
 pure double janet_unwrap_number (Janet x);
 pure int janet_unwrap_integer (Janet x);
 
-Janet janet_wrap_nil ();
+@safe Janet janet_wrap_nil ();
 Janet janet_wrap_number (double x);
 Janet janet_wrap_true ();
 Janet janet_wrap_false ();
