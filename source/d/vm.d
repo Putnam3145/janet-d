@@ -42,13 +42,23 @@ unittest
 int doFile(string path,JanetTable* env = coreEnv)
 {
     import std.file : readText;
-    return doString(readText(path),env);
+    string str;
+    synchronized
+    {
+        str = readText(path);
+    }
+    return doString(str,env);
 }
 /// ditto
 int doFile(string path, Janet* out_, JanetTable* env = coreEnv)
 {
     import std.file : readText;
-    return doString(readText(path),out_,env);
+    string str;
+    synchronized
+    {
+        str = readText(path);
+    }
+    return doString(str,out_,env);
 }
 
 unittest
@@ -59,9 +69,9 @@ unittest
     writeln("Testing parallelism (and hot-swapping, if you're fast)...");
     import std.file : readText;
     string memoizedString = readText("./source/tests/dtests/parallel.janet");
-    foreach(int i;0..1000000)
+    foreach(int i;0..1_000_000)
     {
-        if(i%100==0)
+        if(i%100_000==0)
         {
             memoizedString = readText("./source/tests/dtests/parallel.janet");
         }
