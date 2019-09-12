@@ -32,17 +32,42 @@ import janet.d;
 */
 template makeJanetCFunc(alias func)
 {
-    import std.traits : Parameters,ReturnType,isNestedFunction;
+    import std.traits : Parameters,ReturnType,isNestedFunction,arity;
     import std.typecons : Tuple;
+    import std.meta;
     extern(C) static Janet ourJanetFunc (int argc, Janet* argv)
     {
-        Tuple!(Parameters!func) args;
-        alias funcParams = Parameters!func;
-        static foreach(i;0..args.length)
+        static foreach(overload;__traits(getOverloads,__traits(parent,func),__traits(identifier,func)))
         {
-            args[i] = as!(funcParams[i])(&argv[i]);
+            Tuple!(Parameters!overload) args;
+            static if(arity!overload == 0)
+            {
+                if(argc == 0)
+                {
+                    return janetWrap!(ReturnType!overload)(overload());
+                }
+            }
+            else
+            {
+                if(argc == arity!overload)
+                {
+                    bool argsCorrect = true;
+                    static foreach(i;0..args.length)
+                    {
+                        argsCorrect = argsCorrect && argv[i].janetCompatible!(Parameters!overload[i]);
+                        if(argsCorrect)
+                        {
+                            args[i] = (&argv[i]).as!(Parameters!overload[i]);
+                        }
+                    }
+                    if(argsCorrect)
+                    {
+                        return janetWrap!(ReturnType!overload)(overload(args.expand));
+                    }
+                }
+            }
         }
-        return janetWrap!(ReturnType!func)(func(args.expand));
+        return janet_wrap_nil();
     }
     JanetCFunction makeJanetCFunc()
     {
@@ -54,38 +79,49 @@ template makeJanetCFunc(alias func)
     This is due to many class methods requiring context pointers.
     This is mostly only useful for class registering.
 */
-template makeJanetCFunc(alias func,T,Args...)
+template makeJanetCFunc(alias func,T)
 {
-    import std.traits : Parameters,ReturnType,isNestedFunction;
+    import std.traits : Parameters,ReturnType,isNestedFunction,arity;
     import std.typecons : Tuple;
-    static T delegate(Args) dg;
-    static T function(Args) fp;
-    JanetCFunction makeJanetCFunc(T delegate(Args) argDg)
+    T obj;
+    JanetCFunction makeJanetCFunc(T argObj)
     {
-        dg = argDg;
-        return &ourJanetFunc;
-    }
-    JanetCFunction makeJanetCFunc(T function(Args) argFp) // templates are so wonderful.
-    {
-        fp = argFp;
+        obj = argObj;
         return &ourJanetFunc;
     }
     extern(C) static Janet ourJanetFunc (int argc, Janet* argv)
     {
-        Tuple!(Parameters!func) args;
-        alias funcParams = Parameters!func;
-        static foreach(i;0..args.length)
+        foreach(overload;__traits(getOverloads,__traits(parent,func),__traits(identifier,func)))
         {
-            args[i] = as!(funcParams[i])(&argv[i]);
+            Tuple!(Parameters!overload) args;
+            static if(arity!overload == 0)
+            {
+                if(argc == 0)
+                {
+                    return janetWrap!(ReturnType!overload)(mixin("obj."~__traits(identifier,overload)~"()"));
+                }
+            }
+            else
+            {
+                if(argc == arity!overload)
+                {
+                    bool argsCorrect = true;
+                    static foreach(i;0..args.length)
+                    {
+                        argsCorrect = argsCorrect && argv[i].janetCompatible!(Parameters!overload[i]);
+                        if(argsCorrect)
+                        {
+                            args[i] = (&argv[i]).as!(Parameters!overload[i]);
+                        }
+                    }
+                    if(argsCorrect)
+                    {
+                        return janetWrap!(ReturnType!overload)(mixin("obj."~__traits(identifier,overload)~"(args.expand)"));
+                    }
+                }
+            }
         }
-        if(dg)
-        {
-            return janetWrap!(ReturnType!func)(dg(args.expand));
-        }
-        else
-        {
-            return janetWrap!(ReturnType!func)(fp(args.expand));
-        }
+        return janet_wrap_nil();
     }
 }
 

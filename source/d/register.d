@@ -9,7 +9,31 @@ private template isInternal(string field) // grabbed up from LuaD
 	enum isInternal = field.length >= 2 && field[0..2] == "__";
 }
 
-import std.traits : hasStaticMember,isFunction;
+import std.traits : hasStaticMember,isFunction,FunctionAttribute,functionAttributes,arity,Parameters;
+
+private template isPropertySetter(alias sym)
+    if(isFunction!sym)
+{
+    enum isPropertySetter = (functionAttributes!sym & FunctionAttribute.property) && arity!sym == 1;
+}
+
+import std.meta : anySatisfy;
+
+enum isSettableProperty(alias sym) = !(isFunction!sym) ||
+anySatisfy!(isPropertySetter,__traits(getOverloads,__traits(parent,sym),__traits(identifier,sym)));
+
+private template GetParameterToPropertyFunc(alias sym)
+    if(isFunction!sym && isSettableProperty!sym)
+{
+    static foreach(overload;__traits(getOverloads,__traits(parent,sym),__traits(identifier,sym)))
+    {
+        import std.traits : arity,Parameters;
+        static if(arity!overload == 1)
+        {
+            alias GetParameterToPropertyFunc = Parameters!overload[0];
+        }
+    }
+}
 
 private template defaultGetter(T)
 {
@@ -35,15 +59,23 @@ private template defaultGetter(T)
                         field != "this" &&
                         field != "Monitor")
                 {
-                    static if(isFunction!(mixin("T."~field)))
-                    {
-                        case field:
-                            return janetWrap(makeJanetCFunc!(mixin("realData."~field))(&mixin("realData."~field)));
-                    }
-                    else
+                    static if(!isFunction!(mixin("T."~field)))
                     {
                         case field:
                             return janetWrap(mixin("realData."~field));
+                    }
+                    else
+                    {
+                        static if(isSettableProperty!(mixin("T."~field)))
+                        {
+                            case field:
+                                return janetWrap(mixin("realData."~field));
+                        }
+                        else
+                        {
+                            case field:
+                                return janetWrap(makeJanetCFunc!(mixin("T."~field))(realData));
+                        }
                     }
                 }
             }
@@ -67,12 +99,21 @@ private template defaultPut(T)
                 static if(!isInternal!field &&
                         field != "this" &&
                         field != "Monitor" &&
-                        !isFunction!(mixin("T."~field)))
+                        isSettableProperty!(mixin("T."~field)))
                 {
+                /*
+                */
                 case field:
-                    if(janetCompatible!(typeof(mixin("T."~field)))(value))
+                    static if(isFunction!(mixin("T."~field)))
                     {
-                        mixin("realData."~field) = as!(typeof(mixin("T."~field)))(value);
+                        mixin("realData."~field~" = value.as!(GetParameterToPropertyFunc!(T."~field~"));");
+                    }
+                    else
+                    {
+                        if(janetCompatible!(typeof(mixin("T."~field)))(value))
+                        {
+                            mixin("realData."~field) = value.as!(typeof(mixin("T."~field)));
+                        }
                     }
                     return;
                 }
@@ -190,6 +231,15 @@ unittest
         {
             return b + 2;
         }
+        private int _private;
+        @property int getSetInt()
+        {
+            return _private; 
+        }
+        @property int getSetInt(int n) 
+        {
+            return _private = n;
+        }
     }
     import std.file;
     import std.parallelism : task;
@@ -201,6 +251,7 @@ unittest
     baz.a = 5;
     baz.b = "foobar";
     baz.bar.foo = 10;
+    baz.getSetInt = 12;
     auto abstractInstance = janetWrap(baz);
     assert(baz.a == 5);
     assert(baz.b == "foobar");

@@ -202,6 +202,11 @@ unittest
     pr = (j).as!(int*);
 }
 
+@safe @nogc Janet janetWrap()
+{
+    return janet_wrap_nil();
+}
+
 /**
     Wraps a D value to a Janet value.
     Works for a bunch of built-in types as well as structs; for classes, see register.d.
