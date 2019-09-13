@@ -165,16 +165,24 @@ private bool canBeSafelyConverted(T)()
     }
     else static if(is(T == struct))
     {
+        import std.traits : isFunction;
         JanetTable* tbl = janet_gettable(janet,0);
-        T newStruct;
+        T newStruct = T.init;
         for(int i=0;i<tbl.count;i++)
         {
             JanetKV kv = tbl.data[i];
             static foreach(field; __traits(allMembers,T))
             {
-                if(as!(typeof("T."~field))(kv.key) == field)
+                static if(!isInternal!field &&
+                        field != "this" &&
+                        field != "opAssign" &&
+                        !isFunction!(mixin("T."~field))
+)
                 {
-                    mixin("newStruct."~field) = as!(typeof(mixin("T."~field)))(kv.value);
+                    if(kv.key.as!string == field)
+                    {
+                        mixin("newStruct."~field) = as!(typeof(mixin("T."~field)))(kv.value);
+                    }
                 }
             }
         }
@@ -236,7 +244,6 @@ unittest
     }
     else static if(isSomeString!T)
     {
-        import std.string : representation;
         final switch(strType)
         {
             case JanetStrType.STRING:
@@ -283,7 +290,7 @@ unittest
     else static if(is(T == struct))
     {
         JanetTable* tbl = janet_table(x.tupleof.length);
-        import std.traits : isFunction;
+        import std.traits : isFunction,ReturnType;
         static foreach(field; __traits(allMembers,T))
         {
             static if(!isInternal!field &&
@@ -293,7 +300,14 @@ unittest
                 static if(isFunction!(mixin("x."~field)))
                 {
                     import janet.func : makeJanetCFunc;
-                    janet_table_put(tbl,janetWrap(makeJanetCFunc!(mixin("T."~field))(x)));
+                    static if(!is(ReturnType!(mixin("T."~field)) == void))
+                    {
+                        janet_table_put(tbl,janetWrap(field),janetWrap(makeJanetCFunc!(mixin("T."~field))(&x)));
+                    }
+                    else
+                    {
+                        janet_table_put(tbl,janetWrap(field),janetWrap(makeJanetCFunc!(mixin("T."~field))(&x)));
+                    }
                 }
                 else
                 {

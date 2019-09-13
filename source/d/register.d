@@ -212,7 +212,7 @@ unittest
     struct Bar
     {
         int foo;
-        void foobar()
+        void voidFunc()
         {
             return;
         }

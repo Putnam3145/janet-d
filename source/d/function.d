@@ -27,12 +27,26 @@ import janet.d;
     debug assert(result==0,"Function errored! "~j.as!string);
     return j;
 }
+private Janet janetReturn(alias func,Args...)(Args args)
+{
+    import std.traits : ReturnType;
+    static if(is(ReturnType!func == void))
+    {
+        func(args);
+        return janet_wrap_nil();
+    }
+    else
+    {
+        return janetWrap!(ReturnType!func)(func(args));
+    }
+}
+
 /**
     Wraps around a function, allowing it to be called in Janet.
 */
 template makeJanetCFunc(alias func)
 {
-    import std.traits : Parameters,ReturnType,isNestedFunction,arity;
+    import std.traits : Parameters,isNestedFunction,arity;
     import std.typecons : Tuple;
     import std.meta;
     extern(C) static Janet ourJanetFunc (int argc, Janet* argv)
@@ -44,7 +58,7 @@ template makeJanetCFunc(alias func)
             {
                 if(argc == 0)
                 {
-                    return janetWrap!(ReturnType!overload)(overload());
+                    return janetReturn!(overload)();
                 }
             }
             else
@@ -62,7 +76,7 @@ template makeJanetCFunc(alias func)
                     }
                     if(argsCorrect)
                     {
-                        return janetWrap!(ReturnType!overload)(overload(args.expand));
+                        return janetReturn!(overload)(args.expand);
                     }
                 }
             }
@@ -74,13 +88,16 @@ template makeJanetCFunc(alias func)
         return &ourJanetFunc;
     }
 }
+
+import std.traits : isPointer,PointerTarget;
+
 /**
     The same, but requires a type and an instance of that type as an argument.
     This is due to many class methods requiring context pointers.
     This is mostly only useful for class/struct registering.
 */
 template makeJanetCFunc(alias func,T)
-    if(is(T == class) || is(T == struct))
+    if(is(T == class) || isPointer!T && is(PointerTarget!T == struct))
 {
     import std.traits : Parameters,ReturnType,isNestedFunction,arity;
     import std.typecons : Tuple;
@@ -99,7 +116,16 @@ template makeJanetCFunc(alias func,T)
             {
                 if(argc == 0)
                 {
-                    return janetWrap!(ReturnType!overload)(mixin("obj."~__traits(identifier,overload)~"()"));
+                    static if(is(ReturnType!overload == void))
+                    {
+                        mixin("obj."~__traits(identifier,overload)~"();");
+                        return janet_wrap_nil();
+                    }
+                    else
+                    {
+                        return janetWrap!(ReturnType!overload)(mixin("obj."~__traits(identifier,overload)~"()"));
+                    }
+                    
                 }
             }
             else
@@ -117,7 +143,15 @@ template makeJanetCFunc(alias func,T)
                     }
                     if(argsCorrect)
                     {
-                        return janetWrap!(ReturnType!overload)(mixin("obj."~__traits(identifier,overload)~"(args.expand)"));
+                        static if(is(ReturnType!overload == void))
+                        {
+                            mixin("obj."~__traits(identifier,overload)~"(args.expand)");
+                            return janet_wrap_nil();
+                        }
+                        else
+                        {
+                            return janetWrap!(ReturnType!overload)(mixin("obj."~__traits(identifier,overload)~"(args.expand)"));
+                        }
                     }
                 }
             }
