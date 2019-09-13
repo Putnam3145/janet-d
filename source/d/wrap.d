@@ -283,14 +283,19 @@ unittest
     else static if(is(T == struct))
     {
         JanetTable* tbl = janet_table(x.tupleof.length);
+        import std.traits : isFunction;
         static foreach(field; __traits(allMembers,T))
         {
             static if(!isInternal!field &&
                     field != "this" &&
                     field != "opAssign") // also from LuaD
             {
-                enum isMemberFunction = mixin("is(typeof(&x." ~ field ~ ") == delegate)"); //LuaD
-                static if(!isMemberFunction)
+                static if(isFunction!(mixin("x."~field)))
+                {
+                    import janet.func : makeJanetCFunc;
+                    janet_table_put(tbl,janetWrap(makeJanetCFunc!(mixin("T."~field))(x)));
+                }
+                else
                 {
                     janet_table_put(tbl,janetWrap(field),mixin("janetWrap(x."~field~")"));
                 }

@@ -59,23 +59,15 @@ private template defaultGetter(T)
                         field != "this" &&
                         field != "Monitor")
                 {
-                    static if(!isFunction!(mixin("T."~field)))
+                    static if(!isFunction!(mixin("T."~field)) || isSettableProperty!(mixin("T."~field)))
                     {
                         case field:
                             return janetWrap(mixin("realData."~field));
                     }
                     else
                     {
-                        static if(isSettableProperty!(mixin("T."~field)))
-                        {
-                            case field:
-                                return janetWrap(mixin("realData."~field));
-                        }
-                        else
-                        {
-                            case field:
-                                return janetWrap(makeJanetCFunc!(mixin("T."~field))(realData));
-                        }
+                        case field:
+                            return janetWrap(makeJanetCFunc!(mixin("T."~field))(realData));
                     }
                 }
             }
@@ -220,6 +212,10 @@ unittest
     struct Bar
     {
         int foo;
+        void foobar()
+        {
+            return;
+        }
     }
     class TestClass
     {

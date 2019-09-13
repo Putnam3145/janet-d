@@ -75,11 +75,12 @@ template makeJanetCFunc(alias func)
     }
 }
 /**
-    The same, but requires a delegate or function pointer be put in as an argument.
+    The same, but requires a type and an instance of that type as an argument.
     This is due to many class methods requiring context pointers.
-    This is mostly only useful for class registering.
+    This is mostly only useful for class/struct registering.
 */
 template makeJanetCFunc(alias func,T)
+    if(is(T == class) || is(T == struct))
 {
     import std.traits : Parameters,ReturnType,isNestedFunction,arity;
     import std.typecons : Tuple;
