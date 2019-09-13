@@ -101,11 +101,10 @@ enum JANET_MAX_PROTO_DEPTH = 200;
 /* Maximum depth to follow table prototypes before giving up and returning nil. */
 enum JANET_MAX_MACRO_EXPAND = 200;
 
-/* Define max stack size for stacks before raising a stack overflow error.
- * If this is not defined, fiber stacks can grow without limit (until memory
- * runs out) */
+/* Define default max stack size for stacks before raising a stack overflow error.
+ * This can also be set on a per fiber basis. */
 
-enum JANET_STACK_MAX = 16384;
+enum JANET_STACK_MAX = 0x7fffffff;
 
 /* Use nanboxed values - uses 8 bytes per value instead of 12 or 16.
  * To turn of nanboxing, for debugging purposes or for certain
@@ -1207,6 +1206,7 @@ int janet_verify (JanetFuncDef* def);
 
 /* Pretty printing */
 enum JANET_PRETTY_COLOR = 1;
+enum JANET_PRETTY_ONELINE = 2;
 JanetBuffer* janet_pretty (JanetBuffer* buffer, int depth, int flags, Janet x);
 
 /* Misc */
