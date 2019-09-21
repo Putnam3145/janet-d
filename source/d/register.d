@@ -203,6 +203,8 @@ private template defaultPut(T)
     {
         newType.tostring = &T.__janetToString;
     }
+    //I am *pretty* sure the below line keeps the allocated memory from leaking.
+    //it's 64 bytes per registered type though so it's probably irrelevant
     janet_register_abstract_type(newType);
     return newType;
 }
