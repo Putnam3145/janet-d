@@ -2,7 +2,7 @@ module janet.func;
 
 import janet.c;
 
-import janet.d;
+import janet;
 
 /**
     Emulates the effects of janet_pcall using a thread-local fiber

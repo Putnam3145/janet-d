@@ -8,7 +8,7 @@ import std.typecons : Nullable;
 
 package Nullable!(JanetFiber*,null) defaultFiber;
 
-import janet.d;
+import janet;
 
 static this()
 {
@@ -38,7 +38,7 @@ unittest
 {
     doString(`(print "doString unittest succeeded!")`);
 }
-/// Load a file and run it in the Janet VM.
+/// Load a file and run it in the Janet VM. Not @nogc!
 int doFile(string path,JanetTable* env = coreEnv)
 {
     import std.file : readText;

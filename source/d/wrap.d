@@ -2,7 +2,7 @@ module janet.wrap;
 
 import janet.c;
 
-import janet.d : JanetDAbstractHead, JanetStrType;
+import janet : JanetDAbstractHead, JanetStrType;
 
 private template isInternal(string field) // grabbed up from LuaD
 {
@@ -210,15 +210,16 @@ unittest
     pr = (j).as!(int*);
 }
 
-@safe @nogc Janet janetWrap()
-{
-    return janet_wrap_nil();
-}
 
 /**
     Wraps a D value to a Janet value.
     Works for a bunch of built-in types as well as structs; for classes, see register.d.
 */
+@safe @nogc Janet janetWrap()
+{
+    return janet_wrap_nil();
+}
+/// ditto
 @nogc Janet janetWrap(T,JanetStrType strType = JanetStrType.STRING)(T x)
 {
     /*For the record, if I try to do operator overloading with this, I get this wonderful error:
@@ -330,14 +331,44 @@ unittest
 Janet janetWrap(T)(T x)
     if(is(T == class))
 {
-    // see the JanetDAbstractHead class and register.d for other info.
     return janet_wrap_abstract(new JanetDAbstractHead!(T)(x).ptr);
 }
+
 /// ditto
 @nogc Janet janetWrap(alias func)()
 {
     import janet.func : makeJanetCFunc;
     return janetWrap(makeJanetCFunc!func);
+}
+
+/**
+    Makes a manually-allocated abstract head and returns a pointer to its data.
+    This provides all the syntactic sugar of standard class registration with Janet-D
+    without the GC allocation usually associated with wrapping classes.
+    The data's lifetime must be managed as in C.
+*/
+@nogc JanetDAbstractHead!T* janetWrapNoGC(T)(T x)
+    if(is(T == class))
+{
+    // see the JanetDAbstractHead class and register.d for other info.
+    import core.memory : pureMalloc;
+    JanetDAbstractHead!T* newAbstract = cast(JanetDAbstractHead!T*)pureMalloc(JanetDAbstractHead!(T).sizeof);
+    newAbstract.initialize(x);
+    return newAbstract;
+}
+
+///
+unittest
+{
+    class SmallClass
+    {
+        int justAnInt = 4;
+    }
+    import core.memory : pureFree,pureMalloc;
+    auto boo = cast(SmallClass)pureMalloc(__traits(classInstanceSize,SmallClass));
+    auto abstractHead = janetWrapNoGC(boo);
+    pureFree(abstractHead);
+    pureFree(cast(void*)boo);
 }
 
 version(unittest)

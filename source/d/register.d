@@ -2,7 +2,7 @@ module janet.register;
 
 import janet.c;
 
-import janet.d;
+import janet;
 
 private template isInternal(string field) // grabbed up from LuaD
 {
@@ -116,6 +116,7 @@ private template defaultPut(T)
     }
     auto defaultPut = &defaultPutFunc;
 }
+
 /** Allows one to register a JanetAbstractType with Janet.
 
     The returned object can be used as an argument for the janet_abstract function, which will return a void*.
@@ -147,26 +148,25 @@ private template defaultPut(T)
     All of these are optional; get and put will have defaults applied (see the source code for info) if none is defined.
 
 */
-const(JanetAbstractType)* registerType(T)()
+@nogc const(JanetAbstractType)* registerType(T)()
     if(is(T == class))
 {
-    JanetAbstractType* newType = new JanetAbstractType;
-    import std.string : toStringz;
-    static if(hasStaticMember!(T,"janetPackage"))
+    import core.memory : pureMalloc;
+    static if(hasStaticMember!(T,"__janetPackage"))
     {
-        newType.name = cast(const(char)*)toStringz(T.janetPackage~"/"~T.stringof);
+        enum typeName = T.__janetPackage~"/"~T.stringof;
     }
     else
     {
-        newType.name = cast(const(char)*)toStringz(T.stringof);
+        enum typeName = T.stringof;
     }
+    const auto existingType = janet_get_abstract_type(janet_csymbolv(cast(const(char*))typeName));
+    if(existingType)
     {
-        const auto existingType = janet_get_abstract_type(janet_csymbolv(newType.name));
-        if(existingType)
-        {
-            return existingType;
-        }
+        return existingType;
     }
+    JanetAbstractType* newType = cast(JanetAbstractType*)pureMalloc(JanetAbstractType.sizeof);
+    newType.name = cast(const(char*))typeName;
     static if(hasStaticMember!(T,"__janetGet"))
     {
         newType.get = &T.__janetGet;
@@ -209,6 +209,32 @@ const(JanetAbstractType)* registerType(T)()
 
 unittest
 {
+    import std.stdio : writeln;
+    class SmallClass
+    {
+        int justAnInt = 4;
+    }
+    writeln("Performing class wrapping memory tests.");
+    import std.parallelism : parallel;
+    import std.range : iota;
+    foreach(int i;parallel(iota(0,8_000_000),1_000_000))
+    {
+        SmallClass boo = new SmallClass();
+        janetWrap(boo);
+    }
+    foreach(int i;parallel(iota(0,8_000_000),1_000_000))
+    {
+        import core.memory : pureFree,pureMalloc;
+        auto boo = cast(SmallClass)pureMalloc(__traits(classInstanceSize,SmallClass));
+        auto abstractHead = janetWrapNoGC(boo);
+        pureFree(abstractHead);
+        pureFree(cast(void*)boo);
+    }
+    writeln("Success.");
+}
+
+unittest
+{
     struct Bar
     {
         int foo;
@@ -219,7 +245,7 @@ unittest
     }
     class TestClass
     {
-        static string janetPackage="tests";
+        static immutable string __janetPackage="tests";
         int a;
         string b;
         Bar bar;
@@ -239,8 +265,6 @@ unittest
     }
     import std.file;
     import std.parallelism : task;
-    auto fileTask = task!read("./source/tests/dtests/register.janet");
-    fileTask.executeInNewThread();
     import std.stdio : writeln;
     writeln("Performing class register test.");
     TestClass baz = new TestClass();
@@ -248,25 +272,12 @@ unittest
     baz.b = "foobar";
     baz.bar.foo = 10;
     baz.getSetInt = 12;
-    auto abstractInstance = janetWrap(baz);
     assert(baz.a == 5);
     assert(baz.b == "foobar");
     assert(baz.bar.foo == 10);
     import std.string : toStringz;
-    janet_def(coreEnv,toStringz("abstractTest"),abstractInstance,toStringz("abstractTest"));
-    Janet* j;
+    janetDef(coreEnv,toStringz("abstractTest"),baz,toStringz("abstractTest"));
     Janet testJanet;
-    const ubyte[] file = cast(const(ubyte[]))(fileTask.spinForce);
-    const(ubyte)* realFile = cast(const(ubyte)*)file;
-    int realFileLength = cast(int)(file.length);
-    assert(janet_dobytes(coreEnv,realFile,realFileLength,
-        cast(const(char)*)("./source/tests/dtests/register.janet"),&testJanet)==0,"Abstract test errored!");
-    writeln("Success.");
-    writeln("Performing class wrapping access violation test.");
-    foreach(int i;0..10000)
-    {
-        TestClass boo = new TestClass();
-        auto abst = janetWrap(boo);
-    }
+    assert(doFile("./source/tests/dtests/register.janet",&testJanet)==0,"Abstract test errored!"~testJanet.as!string);
     writeln("Success.");
 }

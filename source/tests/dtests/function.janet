@@ -1,4 +1,4 @@
-(import ./source/tests/helper :prefix "" :exit true)
+(import source/tests/helper :prefix "" :exit true)
 (assert (cfunction? foo) "foo exists")
 (assert (cfunction? bar) "bar exists")
 (assert (= (foo 0) 1) "(foo 0) = 1")
