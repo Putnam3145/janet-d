@@ -49,7 +49,7 @@ template makeJanetCFunc(alias func)
     import std.traits : Parameters,isNestedFunction,arity;
     import std.typecons : Tuple;
     import std.meta;
-    extern(C) static Janet ourJanetFunc (int argc, Janet* argv)
+    extern(C) static Janet ourJanetFunc (int argc, Janet* argv) //not @nogc because function passed in might not be @nogc
     {
         static foreach(overload;__traits(getOverloads,__traits(parent,func),__traits(identifier,func)))
         {

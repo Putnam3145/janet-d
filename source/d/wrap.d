@@ -177,7 +177,7 @@ private bool canBeSafelyConverted(T)()
                         field != "this" &&
                         field != "opAssign" &&
                         !isFunction!(mixin("T."~field))
-)
+                        )
                 {
                     if(kv.key.as!string == field)
                     {
@@ -323,8 +323,23 @@ unittest
 
 unittest
 {
-    int[] arr = [1,2,3,4,5];
-    janetWrap(arr);
+    auto J=Janet();
+    J=janetWrap(J);
+    J=janetWrap(false);
+    J=janetWrap(cast(void*)&J);
+    J=janetWrap("Wrapping a string!");
+    J=janetWrap(&J);
+    J=janetWrap(5.0);
+    J=janetWrap(4);
+    J=janetWrap([1,2,3,4,5]);
+    struct SmallStruct
+    {
+        int a=4;
+        int b=5;
+        float c=4.4;
+    }
+    SmallStruct st;
+    J=janetWrap(st);
 }
 
 /// ditto
@@ -339,6 +354,17 @@ Janet janetWrap(T)(T x)
 {
     import janet.func : makeJanetCFunc;
     return janetWrap(makeJanetCFunc!func);
+}
+
+/// ditto
+@nogc Janet janetWrap(K,V)(V[K] arr)
+{
+    JanetTable* tbl = janet_table(arr.length);
+    foreach(K key,V value; arr)
+    {
+        janet_table_put(arr,janetWrap(key),wrjanetWrapap(value));
+    }
+    return janet_wrap_table(arr);
 }
 
 /**
@@ -382,17 +408,6 @@ version(unittest)
 unittest
 {
     janetWrap!baz;
-}
-
-/// ditto
-@nogc Janet janetWrap(K,V)(V[K] arr)
-{
-    JanetTable* tbl = janet_table(arr.length);
-    foreach(K key,V value; arr)
-    {
-        janet_table_put(arr,janetWrap(key),wrjanetWrapap(value));
-    }
-    return janet_wrap_table(arr);
 }
 unittest
 {

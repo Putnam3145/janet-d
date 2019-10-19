@@ -37,7 +37,7 @@ private template GetParameterToPropertyFunc(alias sym)
 
 private template defaultGetter(T)
 {
-    extern(C) Janet getterFunc(void* data, Janet key)
+    extern(C) Janet getterFunc(void* data, Janet key) //Cannot be @nogc because it might call non-@nogc functions.
     {
         import std.string : fromStringz;
         string keyStr = (&key).as!(string,JanetStrType.KEYWORD);

@@ -55,7 +55,7 @@ unittest
 {
     doString(`(print "doString unittest succeeded!")`);
 }
-/// Load a file and run it in the Janet VM. Not @nogc!
+/// Load a file and run it in the Janet VM. Not @nogc, due to readText.
 int doFile(string path,JanetTable* env = coreEnv)
 {
     import std.file : readText;
