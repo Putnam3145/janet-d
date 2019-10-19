@@ -165,6 +165,9 @@ private template defaultPut(T)
     {
         return existingType;
     }
+    /*allocating manually for two reasons: first so that this function is @nogc,
+      second so that newType here isn't caught up in a GC cleanup, which might cause
+      Janet to have issues.*/
     JanetAbstractType* newType = cast(JanetAbstractType*)pureMalloc(JanetAbstractType.sizeof);
     newType.name = cast(const(char*))typeName;
     static if(hasStaticMember!(T,"__janetGet"))
