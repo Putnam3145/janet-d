@@ -163,13 +163,12 @@ template makeJanetCFunc(alias func,T)
 /**
     Makes a function globally available with Janet.
 */
-void registerFunctionWithJanet(alias func,string documentation = "")()
+@nogc void registerFunctionWithJanet(alias func,string documentation = "")()
 {
-    import std.string : toStringz;
     JanetReg[2] reg;
-    reg[0].name = cast(const(char)*)toStringz(__traits(identifier,func));
+    reg[0].name = cast(const(char)*)__traits(identifier,func);
     reg[0].cfun = makeJanetCFunc!func;
-    reg[0].documentation = cast(const(char)*)toStringz(documentation);
+    reg[0].documentation = cast(const(char)*)(documentation);
     janet_cfuns(coreEnv,"",&reg[0]);
 }
 
@@ -189,8 +188,8 @@ unittest
 {
     import std.stdio : writeln;
     writeln("Performing CFunction register test.");
-    registerFunctionWithJanet!foo();
-    registerFunctionWithJanet!bar();
+    registerFunctionWithJanet!(foo,"Returns the input plus one.");
+    registerFunctionWithJanet!(bar,"Returns the input plus two.");
     writeln("Functions registered.");
     assert(doFile("./source/tests/dtests/function.janet") == 0,"Function failed!");
 }

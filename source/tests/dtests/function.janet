@@ -5,3 +5,5 @@
 (assert (= (foo 1) 2) "(foo 1) = 2")
 (assert (= (bar 0) 2) "(bar 0) = 2")
 (assert (= (bar 1) 3) "(bar 1) = 3")
+(doc foo)
+(doc bar)

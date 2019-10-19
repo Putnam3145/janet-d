@@ -343,7 +343,7 @@ Janet janetWrap(T)(T x)
 
 /**
     Makes a manually-allocated abstract head and returns a pointer to its data.
-    This provides all the syntactic sugar of standard class registration with Janet-D
+    This provides all the convenience of standard class registration with Janet-D
     without the GC allocation usually associated with wrapping classes.
     The data's lifetime must be managed as in C.
 */
