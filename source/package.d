@@ -81,8 +81,10 @@ package struct JanetDAbstractHead(T)
     Define an immutable value in Janet, as Janet's "def".
     Immutable means something slightly different in Janet than in D,
     so this doesn't take in a const or immutable value.
+    Name and documentation should be string literals, or otherwise
+    made to be zero-terminated outside of this.
 */
-@nogc void janetDef(T,S1,S2)(JanetTable* env,string name,T val,string documentation = "")
+@nogc void janetDef(T)(JanetTable* env,string name,T val,string documentation = "")
 {
     import janet.c : janet_def;
     janet_def(env,cast(const(char*))name,janetWrap(val),cast(const(char*))documentation);
@@ -91,7 +93,7 @@ package struct JanetDAbstractHead(T)
 /**
     As janetDef, but value is mutable, as Janet's "var".
 */
-@nogc void janetVar(T,S1,S2)(JanetTable* env,string name,T val,string documentation = "")
+@nogc void janetVar(T)(JanetTable* env,string name,T val,string documentation = "")
 {
     import janet.c : janet_var;
     janet_var(env,cast(const(char*))name,janetWrap(val),cast(const(char*))documentation);
