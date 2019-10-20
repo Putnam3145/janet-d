@@ -4,10 +4,8 @@ import janet.c;
 
 import janet;
 
-private template isInternal(string field) // grabbed up from LuaD
-{
-	enum isInternal = field.length >= 2 && field[0..2] == "__";
-}
+import std.algorithm.searching : startsWith;
+private enum isInternal(string field) = field.startsWith("__");
 
 import std.traits : hasStaticMember,isFunction,FunctionAttribute,functionAttributes,arity,Parameters;
 
@@ -224,16 +222,10 @@ unittest
     import std.range : iota;
     foreach(int i;parallel(iota(0,8_000_000),1_000_000))
     {
+        import core.memory : pureFree;
         SmallClass boo = new SmallClass();
-        janetWrap(boo);
-    }
-    foreach(int i;parallel(iota(0,8_000_000),1_000_000))
-    {
-        import core.memory : pureFree,pureMalloc;
-        auto boo = cast(SmallClass)pureMalloc(__traits(classInstanceSize,SmallClass));
-        auto abstractHead = janetWrapNoGC(boo);
-        pureFree(abstractHead);
-        pureFree(cast(void*)boo);
+        auto head = janetWrap(boo);
+        freeWrappedClass(head);
     }
     writeln("Success.");
 }
@@ -281,8 +273,9 @@ unittest
     assert(baz.b == "foobar");
     assert(baz.bar.foo == 10);
     import std.string : toStringz;
-    janetDef(coreEnv,toStringz("abstractTest"),baz,toStringz("abstractTest"));
+    janetDef(coreEnv,"abstractTest",baz,"abstractTest");
     Janet testJanet;
-    assert(doFile("./source/tests/dtests/register.janet",&testJanet)==0,"Abstract test errored!"~testJanet.as!string);
+    writeln("File to be done...");
+    assert(doFile("./source/tests/dtests/register.janet",&testJanet)==0,"Abstract test errored! "~testJanet.as!string);
     writeln("Success.");
 }

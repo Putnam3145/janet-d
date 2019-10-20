@@ -1,6 +1,8 @@
 (import source/tests/helper :prefix "" :exit true)
+(print "Starting register test in janet")
 (assert (abstract? abstractTest) "abstractTest exists")
 (assert (= (get abstractTest :a) 5 ) "a is 5")
+(print "First access done")
 (assert (= (get abstractTest :b) "foobar") "b is foobar")
 (assert (= (get (get abstractTest :bar) "foo") 10) "bar.foo is 10")
 (assert (= ((get abstractTest :testFunc) 2) 4) "bar.testFunc(2) is 4")

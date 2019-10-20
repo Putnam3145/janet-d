@@ -585,8 +585,8 @@ struct JanetTupleHead
     JanetGCObject gc;
     int length;
     int hash;
-    int sm_start;
-    int sm_end;
+    int sm_line;
+    int sm_column;
     const(Janet)[] data;
 }
 
@@ -632,8 +632,8 @@ enum JANET_FUNCDEF_FLAG_TAG = 0xFFFF;
 /* Source mapping structure for a bytecode instruction */
 struct JanetSourceMapping
 {
-    int start;
-    int end;
+    int line;
+    int column;
 }
 
 /* A function definition. Contains information needed to instantiate closures. */
@@ -711,7 +711,8 @@ struct JanetParser
     size_t statecap;
     size_t bufcount;
     size_t bufcap;
-    size_t offset;
+    size_t line;
+    size_t column;
     size_t pending;
     int lookback;
     int flag;
@@ -959,7 +960,8 @@ void janet_debug_find (
     JanetFuncDef** def_out,
     int* pc_out,
     const(ubyte)* source,
-    int offset);
+    int line,
+    int column);
 
 /* Array functions */
 JanetArray* janet_array (int capacity);
@@ -1004,14 +1006,14 @@ pure extern (D) auto janet_tuple_hash(T)(auto ref T t)
     return janet_tuple_head(t).hash;
 }
 
-pure extern (D) auto janet_tuple_sm_start(T)(auto ref T t)
+pure extern (D) auto janet_tuple_sm_line(T)(auto ref T t)
 {
-    return janet_tuple_head(t).sm_start;
+    return janet_tuple_head(t).sm_line;
 }
 
-pure extern (D) auto janet_tuple_sm_end(T)(auto ref T t)
+pure extern (D) auto janet_tuple_sm_column(T)(auto ref T t)
 {
-    return janet_tuple_head(t).sm_end;
+    return janet_tuple_head(t).sm_column;
 }
 
 pure extern (D) auto janet_tuple_flag(T)(auto ref T t)
@@ -1217,6 +1219,7 @@ int janet_cstrcmp (const(ubyte)* str, const(char)* other);
 Janet janet_get (Janet ds, Janet key);
 Janet janet_getindex (Janet ds, int index);
 int janet_length (Janet x);
+Janet janet_lengthv (Janet x);
 void janet_put (Janet ds, Janet key, Janet value);
 void janet_putindex (Janet ds, int index, Janet value);
 ulong janet_getflags (const(Janet)* argv, int n, const(char)* flags);
@@ -1234,6 +1237,7 @@ void janet_deinit ();
 JanetSignal janet_continue (JanetFiber* fiber, Janet in_, Janet* out_);
 JanetSignal janet_pcall (JanetFunction* fun, int argn, const(Janet)* argv, Janet* out_, JanetFiber** f);
 Janet janet_call (JanetFunction* fun, int argc, const(Janet)* argv);
+Janet janet_mcall (const(char)* name, int argc, Janet* argv);
 void janet_stacktrace (JanetFiber* fiber, Janet err);
 
 /* Scratch Memory API */
@@ -1273,6 +1277,7 @@ void janet_arity (int arity, int min, int max);
 void janet_fixarity (int arity, int fix);
 
 pure @trusted Janet janet_getmethod (const(ubyte)* method, const(JanetMethod)* methods);
+
 pure @trusted double janet_getnumber (const(Janet)* argv, int n);
 pure @trusted JanetArray* janet_getarray (const(Janet)* argv, int n);
 pure @trusted const(Janet)* janet_gettuple (const(Janet)* argv, int n);
@@ -1299,6 +1304,27 @@ pure @trusted void* janet_getabstract (const(Janet)* argv, int n, const(JanetAbs
 pure @trusted JanetRange janet_getslice (int argc, const(Janet)* argv);
 pure @trusted int janet_gethalfrange (const(Janet)* argv, int n, int length, const(char)* which);
 pure @trusted int janet_getargindex (const(Janet)* argv, int n, int length, const(char)* which);
+
+/* Optionals */
+double janet_optnumber (const(Janet)* argv, int argc, int n, double dflt);
+JanetArray* janet_optarray (const(Janet)* argv, int argc, int n, JanetArray* dflt);
+const(Janet)* janet_opttuple (const(Janet)* argv, int argc, int n, const(Janet)* dflt);
+JanetTable* janet_opttable (const(Janet)* argv, int argc, int n, JanetTable* dflt);
+const(JanetKV)* janet_optstruct (const(Janet)* argv, int argc, int n, const(JanetKV)* dflt);
+const(ubyte)* janet_optstring (const(Janet)* argv, int argc, int n, const(ubyte)* dflt);
+const(char)* janet_optcstring (const(Janet)* argv, int argc, int n, const(char)* dflt);
+const(ubyte)* janet_optsymbol (const(Janet)* argv, int argc, int n, const(ubyte)* dflt);
+const(ubyte)* janet_optkeyword (const(Janet)* argv, int argc, int n, const(ubyte)* dflt);
+JanetBuffer* janet_optbuffer (const(Janet)* argv, int argc, int n, JanetBuffer* dflt);
+JanetFiber* janet_optfiber (const(Janet)* argv, int argc, int n, JanetFiber* dflt);
+JanetFunction* janet_optfunction (const(Janet)* argv, int argc, int n, JanetFunction* dflt);
+JanetCFunction janet_optcfunction (const(Janet)* argv, int argc, int n, JanetCFunction dflt);
+int janet_optboolean (const(Janet)* argv, int argc, int n, int dflt);
+void* janet_optpointer (const(Janet)* argv, int argc, int n, void* dflt);
+int janet_optinteger (const(Janet)* argv, int argc, int n, int dflt);
+long janet_optinteger64 (const(Janet)* argv, int argc, int n, long dflt);
+size_t janet_optsize (const(Janet)* argv, int argc, int n, size_t dflt);
+void* janet_optabstract (const(Janet)* argv, int argc, int n, const(JanetAbstractType)* at, void* dflt);
 
 Janet janet_dyn (const(char)* name);
 void janet_setdyn (const(char)* name, Janet value);

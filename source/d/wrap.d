@@ -4,10 +4,8 @@ import janet.c;
 
 import janet : JanetDAbstractHead, JanetStrType;
 
-private template isInternal(string field) // grabbed up from LuaD
-{
-	enum isInternal = field.length >= 2 && field[0..2] == "__";
-}
+import std.algorithm.searching : startsWith;
+private enum isInternal(string field) = field.startsWith("__");
 
 import std.traits : isSomeString,isArray,isAssociativeArray,isPointer;
 /// Converts a Janet string to a D string.
@@ -213,7 +211,12 @@ unittest
 
 /**
     Wraps a D value to a Janet value.
-    Works for a bunch of built-in types as well as structs; for classes, see register.d.
+    
+    Note that class wrapping specifically avoids the garbage collector, which means that
+    the memory must be managed manually. One can later call
+    free(janet_abstract_head(J)) on the Janet object J that this returns to free
+    the memory. Not doing so will lead to a 48 byte leak for each wrapped class.
+    Not using the garbage collector also makes wrapping classes unsafe.
 */
 @safe @nogc Janet janetWrap()
 {
@@ -318,6 +321,13 @@ unittest
         }
         return janet_wrap_table(tbl);
     }
+    else static if(is(T == class) || is(T == struct))
+    {
+        import core.memory : pureMalloc;
+        JanetDAbstractHead!T* newAbstract = cast(JanetDAbstractHead!T*)pureMalloc(JanetDAbstractHead!(T).sizeof);
+        newAbstract.initialize(x);
+        return janet_wrap_abstract(newAbstract.ptr);
+    }
     static assert("Not a compatible type for janet wrap!");
 }
 
@@ -343,13 +353,6 @@ unittest
 }
 
 /// ditto
-Janet janetWrap(T)(T x)
-    if(is(T == class))
-{
-    return janet_wrap_abstract(new JanetDAbstractHead!(T)(x).ptr);
-}
-
-/// ditto
 @nogc Janet janetWrap(alias func)()
 {
     import janet.func : makeJanetCFunc;
@@ -367,22 +370,17 @@ Janet janetWrap(T)(T x)
     return janet_wrap_table(arr);
 }
 
-/**
-    Makes a manually-allocated abstract head and returns a pointer to its data.
-    This provides all the convenience of standard class registration with Janet-D
-    without the GC allocation usually associated with wrapping classes.
-    The data's lifetime must be managed as in C.
-*/
-@nogc JanetDAbstractHead!T* janetWrapNoGC(T)(T x)
-    if(is(T == class))
+/// Frees a previously wrapped class.
+@nogc void freeWrappedClass(Janet abs)
+in
 {
-    // see the JanetDAbstractHead class and register.d for other info.
-    import core.memory : pureMalloc;
-    JanetDAbstractHead!T* newAbstract = cast(JanetDAbstractHead!T*)pureMalloc(JanetDAbstractHead!(T).sizeof);
-    newAbstract.initialize(x);
-    return newAbstract;
+    assert(abs.janet_type==JanetType.JANET_ABSTRACT,"Tried freeing a non-abstract Janet!");
 }
-
+do
+{
+    import core.memory : pureFree;
+    pureFree(cast(void*)(abs.janet_unwrap_abstract.janet_abstract_head));
+}
 ///
 unittest
 {
@@ -391,10 +389,9 @@ unittest
         int justAnInt = 4;
     }
     import core.memory : pureFree,pureMalloc;
-    auto boo = cast(SmallClass)pureMalloc(__traits(classInstanceSize,SmallClass));
-    auto abstractHead = janetWrapNoGC(boo);
-    pureFree(abstractHead);
-    pureFree(cast(void*)boo);
+    auto boo = new SmallClass;
+    auto wrapped = janetWrap(boo);
+    freeWrappedClass(wrapped);
 }
 
 version(unittest)
@@ -412,7 +409,7 @@ unittest
 unittest
 {
     import std.stdio : writeln;
-    import janet.vm : coreEnv;
+    import janet : coreEnv;
     writeln("Starting wrap test.");
     const string foo = "foo";
     Janet* j;

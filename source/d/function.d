@@ -23,6 +23,8 @@ import janet;
         defaultFiber = janet_fiber(fun,128,argc,argv);
     }
     JanetFiber* fiber = janet_fiber_reset(defaultFiber.get,fun,argc,argv);
+    fiber.table = janet_table(0);
+    fiber.table.proto = coreEnv;
     const int result = janet_continue(fiber,janet_wrap_nil(),&j);
     debug assert(result==0,"Function errored! "~j.as!string);
     return j;

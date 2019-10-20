@@ -2,41 +2,7 @@ module janet.vm;
 
 import janet.c;
 
-JanetTable* coreEnv; /// The core environment 
-
-import std.typecons : Nullable;
-
-package Nullable!(JanetFiber*,null) defaultFiber;
-
 import janet;
-
-version(JanetD_NoAutoInit) // Sometimes we might not want to start up a janet instance on every thread's creation
-{
-    /**
-        Initialize Janet. This is done automatically if not compiled with the JanetD_NoAutoInit
-        version, at the initialization of every thread. Compiling with the JanetD_NoAutoInit,
-        these functions must be used instead, which do all the same stuff that is normally done
-        automatically.
-    */
-    void initJanet()
-    {
-        janet_init();
-        coreEnv = janet_core_env(null);
-    }
-    alias deinitJanet = janet_deinit; /// ditto
-}
-else
-{
-    static this()
-    {
-        janet_init();
-        coreEnv = janet_core_env(null);
-    }
-    static ~this()
-    {
-        janet_deinit();
-    }
-}
 
 /// Run a string in the Janet VM.
 @nogc int doString(string str,JanetTable* env = coreEnv)
