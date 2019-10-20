@@ -77,21 +77,12 @@ package struct JanetDAbstractHead(T)
     }
 }
 
-import std.string : toStringz;
-
-template isStringOrCString(T)
-{
-    import std.traits : isSomeString,isSomeChar,isPointer,PointerTarget;
-    enum isStringOrCString = isSomeString!T || (isPointer!T && isSomeChar!(PointerTarget!T));
-}
-
 /**
     Define an immutable value in Janet, as Janet's "def".
     Immutable means something slightly different in Janet than in D,
     so this doesn't take in a const or immutable value.
 */
-@nogc void janetDef(T,S1,S2)(JanetTable* env,S1 name,T val,S2 documentation = "")
-    if(isStringOrCString!S1 && isStringOrCString!S2)
+@nogc void janetDef(T,S1,S2)(JanetTable* env,string name,T val,string documentation = "")
 {
     import janet.c : janet_def;
     janet_def(env,cast(const(char*))name,janetWrap(val),cast(const(char*))documentation);
@@ -101,7 +92,6 @@ template isStringOrCString(T)
     As janetDef, but value is mutable, as Janet's "var".
 */
 @nogc void janetVar(T,S1,S2)(JanetTable* env,string name,T val,string documentation = "")
-    if(isStringOrCString!S1 && isStringOrCString!S2)
 {
     import janet.c : janet_var;
     janet_var(env,cast(const(char*))name,janetWrap(val),cast(const(char*))documentation);
