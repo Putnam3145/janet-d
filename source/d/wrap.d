@@ -4,10 +4,28 @@ import janet.c;
 
 import janet : JanetDAbstractHead, JanetStrType;
 
+import std.meta : AliasSeq;
+
 import std.algorithm.searching : startsWith;
 private enum isInternal(string field) = field.startsWith("__");
 
-import std.traits : isSomeString,isArray,isAssociativeArray,isPointer;
+import std.traits : isSomeString,isArray,isAssociativeArray,isSomeFunction,isPointer,ReturnType, Parameters;
+
+import std.traits : functionAttributes, SetFunctionAttributes,isFunction;
+
+template IsJanetCFunc(T)
+{
+    static if(isSomeFunction!T)
+    {
+        alias strippedFuncType = SetFunctionAttributes!(T,"C",functionAttributes!JanetCFunction);
+        enum IsJanetCFunc = is(strippedFuncType == JanetCFunction);
+    }
+    else
+    {
+        enum IsJanetCFunc = false;
+    }
+}
+
 /// Converts a Janet string to a D string.
 @nogc string fromJanetString(Janet janet)
 {
@@ -55,7 +73,7 @@ pure @safe @nogc bool janetCompatible(T)(Janet janet)
     {
         return janet.type == JanetType.JANET_TABLE || janet.type == JanetType.JANET_STRUCT;
     }
-    else static if(is(T==JanetCFunction))
+    else static if(IsJanetCFunc!T)
     {
         return janet.type == JanetType.JANET_CFUNCTION;
     }
@@ -132,7 +150,7 @@ private bool canBeSafelyConverted(T)()
     {
         return janet_getbuffer(janet,0);
     }
-    else static if(is(T==JanetCFunction))
+    else static if(IsJanetCFunc!T)
     {
         return janet_getcfunction(janet,0);
     }
@@ -163,7 +181,6 @@ private bool canBeSafelyConverted(T)()
     }
     else static if(is(T == struct))
     {
-        import std.traits : isFunction;
         JanetTable* tbl = janet_gettable(janet,0);
         T newStruct = T.init;
         for(int i=0;i<tbl.count;i++)
@@ -242,7 +259,7 @@ unittest
     {
         return janet_wrap_abstract(x);
     }
-    else static if(is(T == JanetCFunction))
+    else static if(IsJanetCFunc!T)
     {
         return janet_wrap_cfunction(x);
     }
@@ -294,7 +311,6 @@ unittest
     else static if(is(T == struct))
     {
         JanetTable* tbl = janet_table(x.tupleof.length);
-        import std.traits : isFunction,ReturnType;
         static foreach(field; __traits(allMembers,T))
         {
             static if(!isInternal!field &&
@@ -304,14 +320,7 @@ unittest
                 static if(isFunction!(mixin("x."~field)))
                 {
                     import janet.func : makeJanetCFunc;
-                    static if(!is(ReturnType!(mixin("T."~field)) == void))
-                    {
-                        janet_table_put(tbl,janetWrap(field),janetWrap(makeJanetCFunc!(mixin("T."~field))(&x)));
-                    }
-                    else
-                    {
-                        janet_table_put(tbl,janetWrap(field),janetWrap(makeJanetCFunc!(mixin("T."~field))(&x)));
-                    }
+                    janet_table_put(tbl,janetWrap(field),janetWrap(makeJanetCFunc!(mixin("T."~field))(&x)));
                 }
                 else
                 {
@@ -328,7 +337,10 @@ unittest
         newAbstract.initialize(x);
         return janet_wrap_abstract(newAbstract.ptr);
     }
-    static assert("Not a compatible type for janet wrap!");
+    else
+    {
+        static assert(0,"Not a compatible type for janet wrap!");
+    }
 }
 
 unittest
@@ -396,7 +408,7 @@ unittest
 
 version(unittest)
 {
-    int baz(int a)
+    pure @safe @nogc int baz(int a)
     {
         return a+1;
     }
@@ -404,7 +416,8 @@ version(unittest)
 
 unittest
 {
-    janetWrap!baz;
+    auto fun = janetWrap!baz;
+
 }
 unittest
 {

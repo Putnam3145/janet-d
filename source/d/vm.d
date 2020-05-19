@@ -52,9 +52,9 @@ unittest
     writeln("Testing parallelism (and hot-swapping, if you're fast)...");
     import std.file : readText;
     string memoizedString = readText("./source/tests/dtests/parallel.janet");
-    foreach(int i;0..1_000_000)
+    foreach(int i;0..100_000)
     {
-        if(i%100_000==0)
+        if(i%10_000==0)
         {
             memoizedString = readText("./source/tests/dtests/parallel.janet");
         }

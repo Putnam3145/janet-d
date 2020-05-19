@@ -278,4 +278,4 @@ unittest
     writeln("File to be done...");
     assert(doFile("./source/tests/dtests/register.janet",&testJanet)==0,"Abstract test errored! "~testJanet.as!string);
     writeln("Success.");
-}
+}   

@@ -5,6 +5,7 @@
 (print "First access done")
 (assert (= (get abstractTest :b) "foobar") "b is foobar")
 (assert (= (get (get abstractTest :bar) "foo") 10) "bar.foo is 10")
+(assert (cfunction? (get abstractTest :testFunc)) "bar.testFunc is not a function")
 (assert (= ((get abstractTest :testFunc) 2) 4) "bar.testFunc(2) is 4")
 (assert (= (get abstractTest :getSetInt) 12) (string "getSetInt is" (get abstractTest :getSetInt)))
 (put abstractTest :a 6)

@@ -48,10 +48,10 @@ private Janet janetReturn(alias func,Args...)(Args args)
 */
 template makeJanetCFunc(alias func)
 {
-    import std.traits : Parameters,isNestedFunction,arity;
+    import std.traits : Parameters,isNestedFunction,arity,functionAttributes,SetFunctionAttributes,FunctionTypeOf;
     import std.typecons : Tuple;
     import std.meta;
-    extern(C) static Janet ourJanetFunc (int argc, Janet* argv) //not @nogc because function passed in might not be @nogc
+    extern(C) static Janet ourJanetFunc (int argc, Janet* argv)
     {
         static foreach(overload;__traits(getOverloads,__traits(parent,func),__traits(identifier,func)))
         {
@@ -85,9 +85,11 @@ template makeJanetCFunc(alias func)
         }
         return janet_wrap_nil();
     }
-    JanetCFunction makeJanetCFunc()
+    alias JanetDFunction = SetFunctionAttributes!(JanetCFunction,"C",functionAttributes!func);
+    pragma(msg,__traits(identifier,func));
+    JanetDFunction makeJanetCFunc()
     {
-        return &ourJanetFunc;
+        return cast(JanetDFunction)(&ourJanetFunc);
     }
 }
 
