@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Calvin Rose
+# Copyright (c) 2020 Calvin Rose
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -18,7 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-(import ./source/tests/helper :prefix "" :exit true)
+(import source/tests/helper :prefix "" :exit true)
 (start-suite 3)
 
 (assert (= (length (range 10)) 10) "(range 10)")
@@ -203,12 +203,12 @@
 (defn check-match
   [pat text should-match]
   (def result (peg/match pat text))
-  (assert (= (not should-match) (not result)) text))
+  (assert (= (not should-match) (not result)) (string "check-match " text)))
 
 (defn check-deep
   [pat text what]
   (def result (peg/match pat text))
-  (assert (deep= result what) text))
+  (assert (deep= result what) (string "check-deep " text)))
 
 # Just numbers
 

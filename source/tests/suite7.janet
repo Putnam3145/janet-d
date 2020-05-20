@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Calvin Rose & contributors
+# Copyright (c) 2020 Calvin Rose & contributors
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -19,7 +19,6 @@
 # IN THE SOFTWARE.
 
 (import source/tests/helper :prefix "" :exit true)
-
 (start-suite 7)
 
 # Using a large test grammar
@@ -129,7 +128,7 @@
 
 # Make sure Carriage Returns don't end up in doc strings.
 
-(assert (not (string/find "\r" (get ((fiber/getenv (fiber/current)) 'cond) :doc))) "no \\r in doc strings")
+(assert (not (string/find "\r" (get ((fiber/getenv (fiber/current)) 'cond) :doc ""))) "no \\r in doc strings")
 
 # module/expand-path regression
 (with-dyns [:syspath ".janet/.janet"]
@@ -170,5 +169,151 @@
 # Simple take, drop, etc. tests.
 (assert (idx= (take 10 (range 100)) (range 10)) "take 10")
 (assert (idx= (drop 10 (range 100)) (range 10 100)) "drop 10")
+
+# Printing to buffers
+(def out-buf @"")
+(def err-buf @"")
+(with-dyns [:out out-buf :err err-buf]
+  (print "Hello")
+  (prin "hi")
+  (eprint "Sup")
+  (eprin "not much."))
+
+(assert (= (string out-buf) "Hello\nhi") "print and prin to buffer 1")
+(assert (= (string err-buf) "Sup\nnot much.") "eprint and eprin to buffer 1")
+
+(assert (= (string '()) (string [])) "empty bracket tuple literal")
+
+# with-vars
+(var abc 123)
+(assert (= 356 (with-vars [abc 456] (- abc 100))) "with-vars 1")
+(assert-error "with-vars 2" (with-vars [abc 456] (error :oops)))
+(assert (= abc 123) "with-vars 3")
+
+# Trim empty string
+(assert (= "" (string/trim " ")) "string/trim regression")
+
+# RNGs
+
+(defn test-rng
+  [rng]
+  (assert (all identity (seq [i :range [0 1000]]
+                             (<= (math/rng-int rng i) i))) "math/rng-int test")
+  (assert (all identity (seq [i :range [0 1000]]
+    (def x (math/rng-uniform rng))
+    (and (>= x 0) (< x 1))))
+          "math/rng-uniform test"))
+
+(def seedrng (math/rng 123))
+(for i 0 75
+  (test-rng (math/rng (:int seedrng))))
+
+(assert (deep-not= (-> 123 math/rng (:buffer 16))
+                   (-> 456 math/rng (:buffer 16))) "math/rng-buffer 1")
+
+(assert-no-error "math/rng-buffer 2" (math/seedrandom "abcdefg"))
+
+# OS Date test
+
+(assert (deep= {:year-day 0
+                :minutes 30
+                :month 0
+                :dst false
+                :seconds 0
+                :year 2014
+                :month-day 0
+                :hours 20 
+                :week-day 3}
+               (os/date 1388608200)) "os/date")
+
+# OS mktime test
+
+(assert (= 1388608200 (os/mktime {:year-day 0
+                                  :minutes 30
+                                  :month 0
+                                  :dst false
+                                  :seconds 0
+                                  :year 2014
+                                  :month-day 0
+                                  :hours 20
+                                  :week-day 3})) "os/mktime")
+
+(def now (os/time))
+(assert (= (os/mktime (os/date now)) now) "UTC os/mktime")
+(assert (= (os/mktime (os/date now true) true) now) "local os/mktime")
+(assert (= (os/mktime {:year 1970}) 0) "os/mktime default values")
+
+# Appending buffer to self
+
+(with-dyns [:out @""]
+  (prin "abcd")
+  (prin (dyn :out))
+  (prin (dyn :out))
+  (assert (deep= (dyn :out) @"abcdabcdabcdabcd") "print buffer to self"))
+
+(os/setenv "TESTENV1" "v1")
+(os/setenv "TESTENV2" "v2")
+(assert (= (os/getenv "TESTENV1") "v1") "getenv works")
+(def environ (os/environ))
+(assert (= [(environ "TESTENV1") (environ "TESTENV2")] ["v1" "v2"]) "environ works")
+
+# Issue #183 - just parse it :)
+1e-4000000000000000000000
+
+# Ensure randomness puts n of pred into our buffer eventually
+(defn cryptorand-check
+  [n pred]
+  (def max-attempts 10000)
+  (var attempts 0)
+  (while (not= attempts max-attempts)
+    (def cryptobuf (os/cryptorand 10))
+    (when (= n (count pred cryptobuf))
+      (break))
+    (++ attempts))
+  (not= attempts max-attempts))
+
+(def v (math/rng-int (math/rng (os/time)) 100))
+(assert (cryptorand-check 0 |(= $ v)) "cryptorand skips value sometimes")
+(assert (cryptorand-check 1 |(= $ v)) "cryptorand has value sometimes")
+
+(do 
+  (def buf (buffer/new-filled 1))
+  (os/cryptorand 1 buf)
+  (assert (= (in buf 0) 0) "cryptorand doesn't overwrite buffer")
+  (assert (= (length buf) 2) "cryptorand appends to buffer"))
+
+# Nested quasiquotation
+
+(def nested ~(a ~(b ,(+ 1 2) ,(foo ,(+ 1 3) d) e) f))
+(assert (deep= nested '(a ~(b ,(+ 1 2) ,(foo 4 d) e) f)) "nested quasiquote")
+
+# Top level unquote
+(defn constantly
+  []
+  (comptime (math/random)))
+
+(assert (= (constantly) (constantly)) "comptime 1")
+
+(assert-error "arity issue in macro" (eval '(each [])))
+(assert-error "comptime issue" (eval '(comptime (error "oops"))))
+
+(with [f (file/temp)]
+  (file/write f "foo\n")
+  (file/flush f)
+  (file/seek f :set 0)
+  (assert (= (string (file/read f :all)) "foo\n") "temp files work"))
+
+(var counter 0)
+(when-with [x nil |$]
+           (++ counter))
+(when-with [x 10 |$]
+           (+= counter 10))
+
+(assert (= 10 counter) "when-with 1")
+
+(if-with [x nil |$] (++ counter) (+= counter 10))
+(if-with [x true |$] (+= counter 20) (+= counter 30))
+
+(assert (= 40 counter) "if-with 1")
 
 (end-suite)

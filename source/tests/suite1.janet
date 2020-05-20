@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Calvin Rose
+# Copyright (c) 2020 Calvin Rose
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -18,7 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-(import ./source/tests/helper :prefix "" :exit true)
+(import source/tests/helper :prefix "" :exit true)
 (start-suite 1)
 
 (assert (= 400 (math/sqrt 160000)) "sqrt(160000)=400")
@@ -212,12 +212,16 @@
 
 (assert (= 7 (case :a :b 5 :c 6 :u 10 7)) "case with default")
 
-# Testing the loop and for macros
+# Testing the loop and seq macros
 (def xs (apply tuple (seq [x :range [0 10] :when (even? x)] (tuple (/ x 2) x))))
 (assert (= xs '((0 0) (1 2) (2 4) (3 6) (4 8))) "seq macro 1")
 
 (def xs (apply tuple (seq [x :down [8 -2] :when (even? x)] (tuple (/ x 2) x))))
 (assert (= xs '((4 8) (3 6) (2 4) (1 2) (0 0))) "seq macro 2")
+
+# :range-to and :down-to
+(assert (deep= (seq [x :range-to [0 10]] x) (seq [x :range [0 11]] x)) "loop :range-to")
+(assert (deep= (seq [x :down-to [10 0]] x) (seq [x :down [10 -1]] x)) "loop :down-to")
 
 # Some testing for not=
 (assert (not= 1 1 0) "not= 1")
@@ -232,11 +236,11 @@
 (assert (= 4 ((get closures 4))) "closure in loop 4")
 
 # More numerical tests
-(assert (== 1 1.0) "numerical equal 1")
-(assert (== 0 0.0) "numerical equal 2")
-(assert (== 0 -0.0) "numerical equal 3")
-(assert (== 2_147_483_647 2_147_483_647.0) "numerical equal 4")
-(assert (== -2_147_483_648 -2_147_483_648.0) "numerical equal 5")
+(assert (= 1 1.0) "numerical equal 1")
+(assert (= 0 0.0) "numerical equal 2")
+(assert (= 0 -0.0) "numerical equal 3")
+(assert (= 2_147_483_647 2_147_483_647.0) "numerical equal 4")
+(assert (= -2_147_483_648 -2_147_483_648.0) "numerical equal 5")
 
 # Array tests
 
@@ -254,5 +258,27 @@
 (assert (array= @[:one :two :three :four :five] @[:one :two :three :four :five]) "array comparison 3")
 (assert (array= (array/slice @[1 2 3] 0 2) @[1 2]) "array/slice 1")
 (assert (array= (array/slice @[0 7 3 9 1 4] 2 -2) @[3 9 1]) "array/slice 2")
+
+# Even and odd
+
+(assert (odd? 9) "odd? 1")
+(assert (odd? -9) "odd? 2")
+(assert (not (odd? 10)) "odd? 3")
+(assert (not (odd? 0)) "odd? 4")
+(assert (not (odd? -10)) "odd? 5")
+(assert (not (odd? 1.1)) "odd? 6")
+(assert (not (odd? -0.1)) "odd? 7")
+(assert (not (odd? -1.1)) "odd? 8")
+(assert (not (odd? -1.6)) "odd? 9")
+
+(assert (even? 10) "even? 1")
+(assert (even? -10) "even? 2")
+(assert (even? 0) "even? 3")
+(assert (not (even? 9)) "even? 4")
+(assert (not (even? -9)) "even? 5")
+(assert (not (even? 0.1)) "even? 6")
+(assert (not (even? -0.1)) "even? 7")
+(assert (not (even? -10.1)) "even? 8")
+(assert (not (even? -10.6)) "even? 9")
 
 (end-suite)

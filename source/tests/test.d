@@ -2,11 +2,15 @@ import janet;
 
 unittest
 {
-    import std.file;
+    import std.file : dirEntries, DirEntry, SpanMode;
+    auto anyErrored = false;
     foreach(DirEntry entry;dirEntries("./source/tests/","suite*.janet",SpanMode.shallow))
     {
-        const auto errorString = entry.name~" errored!";
         Janet j;
-        assert(doFile(entry.name,&j)==0,errorString~(&j).as!(string));
+        if(doFile(entry.name,&j))
+        {
+            anyErrored = true;
+        }
     }
+    assert(!anyErrored);
 }

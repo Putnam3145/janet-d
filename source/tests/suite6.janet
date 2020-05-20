@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Calvin Rose & contributors
+# Copyright (c) 2020 Calvin Rose & contributors
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -18,7 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-(import ./source/tests/helper :prefix "" :exit true)
+(import source/tests/helper :prefix "" :exit true)
 (start-suite 6)
 
 # some tests for bigint
@@ -62,15 +62,15 @@
    # just to big
    (def d (u64 "123456789123456789123456789"))))
 
-(assert (:== (:/ (u64 "0xffff_ffff_ffff_ffff") 8 2) "0xfffffffffffffff") "bigint operations")
-(assert (let [a (u64 0xff)] (:== (:+ a a a a) (:* a 2 2))) "bigint operations")
+(assert (= (:/ (u64 "0xffff_ffff_ffff_ffff") 8 2) (u64 "0xfffffffffffffff")) "bigint operations 1")
+(assert (let [a (u64 0xff)] (= (:+ a a a a) (:* a 2 2))) "bigint operations 2")
+
+(assert (= (string (i64 -123)) "-123") "i64 prints reasonably")
+(assert (= (string (u64 123)) "123") "u64 prints reasonably")
 
 (assert-error
  "trap INT64_MIN / -1"
  (:/ (int/s64 "-0x8000_0000_0000_0000") -1))
-
-# in place operators
-(assert (let [a (u64 1e10)] (:+! a 1000000 "1000000" "0xffff") (:== a 10002065535)) "in place operators")
 
 # int64 typed arrays
 (assert (let [t (tarray/new :int64 10)
@@ -81,10 +81,10 @@
           (set (t 3) (t 0))
           (set (t 4) (u64 1000))
           (and
-           (:== (t 0) (t 1))
-           (:== (t 1) (t 2))
-           (:== (t 2) (t 3))
-           (:== (t 3) (t 4))
+           (= (t 0) (t 1))
+           (= (t 1) (t 2))
+           (= (t 2) (t 3))
+           (= (t 3) (t 4))
            ))
         "int64 typed arrays")
 
@@ -118,12 +118,23 @@
 (assert (deep= (parser/status p) (parser/status p2)) "parser 2")
 (assert (deep= (parser/state p) (parser/state p2)) "parser 3")
 
+# Parser errors
+(defn parse-error [input]
+  (def p (parser/new))
+  (parser/consume p input)
+  (parser/error p))
+
+# Invalid utf-8 sequences
+(assert (not= nil (parse-error @"\xc3\x28")) "reject invalid utf-8 symbol")
+(assert (not= nil (parse-error @":\xc3\x28")) "reject invalid utf-8 keyword")
+
 # String check-set
 (assert (string/check-set "abc" "a") "string/check-set 1")
 (assert (not (string/check-set "abc" "z")) "string/check-set 2")
 (assert (string/check-set "abc" "abc") "string/check-set 3")
-(assert (not (string/check-set "abc" "")) "string/check-set 4")
+(assert (string/check-set "abc" "") "string/check-set 4")
 (assert (not (string/check-set "" "aabc")) "string/check-set 5")
+(assert (not (string/check-set "abc" "abcdefg")) "string/check-set 6")
 
 # Marshal and unmarshal pegs
 (def p (-> "abcd" peg/compile marshal unmarshal))
@@ -152,6 +163,11 @@
 (setdyn :current-file "some-dir/some-file")
 (defn test-expand [path temp]
   (string (module/expand-path path temp)))
+
+# Right hand operators
+(assert (= (int/s64 (sum (range 10))) (sum (map int/s64 (range 10)))) "right hand operators 1")
+(assert (= (int/s64 (product (range 1 10))) (product (map int/s64 (range 1 10)))) "right hand operators 2")
+(assert (= (int/s64 15) (bor 10 (int/s64 5)) (bor (int/s64 10) 5)) "right hand operators 3")
 
 (assert (= (test-expand "abc" ":cur:/:all:") "some-dir/abc") "module/expand-path 1")
 (assert (= (test-expand "./abc" ":cur:/:all:") "some-dir/abc") "module/expand-path 2")

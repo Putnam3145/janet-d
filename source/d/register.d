@@ -35,20 +35,13 @@ private template GetParameterToPropertyFunc(alias sym)
 
 private template defaultGetter(T)
 {
-    extern(C) Janet getterFunc(void* data, Janet key) //Cannot be @nogc because it might call non-@nogc functions.
+    extern(C) int getterFunc(void* data, Janet key,Janet* _out) //Cannot be @nogc because it might call non-@nogc functions.
     {
         import std.string : fromStringz;
-        string keyStr = (&key).as!(string,JanetStrType.KEYWORD);
-        /*
-            While it's fresh in my mind:
-            the void* passed in is a pointer to a JanetDAbstractHead!T's data member,
-            which is a union of a long[] and an object of class T.
-            As objects of classes are pass-by-reference, this object is actually a pointer,
-            and can be accessed as such with a void*. Since we know that the data at the union
-            is a memory address, we can convert it to a void**, then treat the double-dereferenced
-            data there as an object of class T.
-        */
-        T realData = cast(T)*(cast(void**)data); //TODO: figure out a way to do this that isn't so onerous
+        immutable string keyStr = (&key).as!(string,JanetStrType.KEYWORD);
+        debug import std.stdio : writeln;
+        auto helper = *cast(JanetAbstractClassHelper!T*) data;
+        T realData = helper.obj;
         switch(keyStr)
         {
             static foreach(field; __traits(allMembers,T))
@@ -60,17 +53,19 @@ private template defaultGetter(T)
                     static if(!isFunction!(mixin("T."~field)) || isSettableProperty!(mixin("T."~field)))
                     {
                         case field:
-                            return janetWrap(mixin("realData."~field));
+                            *_out = janetWrap(mixin("realData."~field));
+                            return 1;
                     }
                     else
                     {
                         case field:
-                            return janetWrap(makeJanetCFunc!(mixin("T."~field))(realData));
+                            *_out = janetWrap(makeJanetCFunc!(mixin("T."~field))(realData));
+                            return 1;
                     }
                 }
             }
                 default:
-                    return janet_wrap_nil();
+                    return 0;
             }
     }
     auto defaultGetter = &getterFunc;
@@ -81,7 +76,8 @@ private template defaultPut(T)
     extern(C) void defaultPutFunc(void* data, Janet key, Janet value)
     {
         string keyStr = (&key).as!(string,JanetStrType.KEYWORD);
-        T realData = cast(T)*(cast(void**)data);
+        auto helper = *cast(JanetAbstractClassHelper!T*) data;
+        T realData = helper.obj;
         switch(keyStr)
         {
             static foreach(field; __traits(allMembers,T))
@@ -163,10 +159,7 @@ private template defaultPut(T)
     {
         return existingType;
     }
-    /*allocating manually for two reasons: first so that this function is @nogc,
-      second so that newType here isn't caught up in a GC cleanup, which might cause
-      Janet to have issues.*/
-    JanetAbstractType* newType = cast(JanetAbstractType*)pureMalloc(JanetAbstractType.sizeof);
+    JanetAbstractType newType;
     newType.name = cast(const(char*))typeName;
     static if(hasStaticMember!(T,"__janetGet"))
     {
@@ -206,8 +199,10 @@ private template defaultPut(T)
     }
     //I am *pretty* sure the below line keeps the allocated memory from leaking.
     //it's 64 bytes per registered type though so it's probably irrelevant
-    janet_register_abstract_type(newType);
-    return newType;
+    auto typePointer = cast(JanetAbstractType*)pureMalloc(JanetAbstractType.sizeof);
+    *typePointer = newType;
+    janet_register_abstract_type(typePointer);
+    return typePointer;
 }
 
 unittest
@@ -218,14 +213,11 @@ unittest
         int justAnInt = 4;
     }
     writeln("Performing class wrapping memory tests.");
-    import std.parallelism : parallel;
     import std.range : iota;
-    foreach(int i;parallel(iota(0,8_000_000),1_000_000))
+    foreach(int i;iota(0,10_000))
     {
-        import core.memory : pureFree;
         SmallClass boo = new SmallClass();
-        auto head = janetWrap(boo);
-        freeWrappedClass(head);
+        janetWrap(boo);
     }
     writeln("Success.");
 }
@@ -265,6 +257,7 @@ unittest
     import std.stdio : writeln;
     writeln("Performing class register test.");
     TestClass baz = new TestClass();
+    writeln(cast(void*)baz);
     baz.a = 5;
     baz.b = "foobar";
     baz.bar.foo = 10;
@@ -275,6 +268,8 @@ unittest
     import std.string : toStringz;
     janetDef(coreEnv,"abstractTest",baz,"abstractTest");
     Janet testJanet;
+    writeln("Checking abstractTest exists...");
+    assert(!doString(`(assert (abstract? abstractTest) "abstractTest exists")`));
     writeln("File to be done...");
     assert(doFile("./source/tests/dtests/register.janet",&testJanet)==0,"Abstract test errored! "~testJanet.as!string);
     writeln("Success.");

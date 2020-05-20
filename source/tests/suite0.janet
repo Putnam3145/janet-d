@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Calvin Rose
+# Copyright (c) 2020 Calvin Rose
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -18,7 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-(import ./source/tests/helper :prefix "" :exit true)
+(import source/tests/helper :prefix "" :exit true)
 (start-suite 0)
 
 (assert (= 10 (+ 1 2 3 4)) "addition")
@@ -37,24 +37,26 @@
 (assert (= 7 (% 20 13)) "modulo 1")
 (assert (= -7 (% -20 13)) "modulo 2")
 
-(assert (order< 1.0 nil false true
-                (fiber/new (fn [] 1))
-                "hi"
-                (quote hello)
-                :hello
-                (array 1 2 3)
-                (tuple 1 2 3)
-                (table "a" "b" "c" "d")
-                (struct 1 2 3 4)
-                (buffer "hi")
-                (fn [x] (+ x x))
-                print) "type ordering")
+(assert (< 1.0 nil false true
+           (fiber/new (fn [] 1))
+           "hi"
+           (quote hello)
+           :hello
+           (array 1 2 3)
+           (tuple 1 2 3)
+           (table "a" "b" "c" "d")
+           (struct 1 2 3 4)
+           (buffer "hi")
+           (fn [x] (+ x x))
+           print) "type ordering")
 
 (assert (= (string (buffer "123" "456")) (string @"123456")) "buffer literal")
 (assert (= (get {} 1) nil) "get nil from empty struct")
 (assert (= (get @{} 1) nil) "get nil from empty table")
 (assert (= (get {:boop :bap} :boop) :bap) "get non nil from struct")
 (assert (= (get @{:boop :bap} :boop) :bap) "get non nil from table")
+(assert (= (get @"\0" 0) 0) "get non nil from buffer")
+(assert (= (get @"\0" 1) nil) "get nil from buffer oob")
 (assert (put @{} :boop :bap) "can add to empty table")
 (assert (put @{1 3} :boop :bap) "can add to non-empty table")
 
@@ -126,17 +128,17 @@
 
 ((fn []
    (var accum 1)
-   (var count 0)
-   (while (< count 16)
+   (var numcount 0)
+   (while (< numcount 16)
      (set accum (blshift accum 1))
-     (set count (+ 1 count)))
+     (set numcount (+ 1 numcount)))
    (assert (= accum 65536) "loop in closure")))
 
 (var accum 1)
-(var count 0)
-(while (< count 16)
+(var numcount 0)
+(while (< numcount 16)
   (set accum (blshift accum 1))
-  (set count (+ 1 count)))
+  (set numcount (+ 1 numcount)))
 (assert (= accum 65536) "loop globally")
 
 (assert (= (struct 1 2 3 4 5 6 7 8) (struct 7 8 5 6 3 4 1 2)) "struct order does not matter 1")
@@ -204,6 +206,10 @@
 (def 🐮 :cow)
 (assert (= (string "🐼" 🦊 🐮) "🐼foxcow") "emojis 🙉 :)")
 (assert (not= 🦊 "🦊") "utf8 strings are not symbols and vice versa")
+(assert (= "\U01F637" "😷") "unicode escape 1")
+(assert (= "\u2623" "\U002623" "☣") "unicode escape 2")
+(assert (= "\u24c2" "\U0024c2" "Ⓜ") "unicode escape 3")
+(assert (= "\u0061" "a") "unicode escape 4")
 
 # Symbols with @ character
 
@@ -248,15 +254,20 @@
 (assert (apply <= (merge @[1 3 5] @[2 4 6 6 6 9])) "merge sort merge 3")
 (assert (apply <= (merge '(1 3 5) @[2 4 6 6 6 9])) "merge sort merge 4")
 
+(assert (deep= @[1 2 3 4 5] (sort @[5 3 4 1 2])) "sort 1")
+(assert (deep= @[{:a 1} {:a 4} {:a 7}] (sort-by |($ :a) @[{:a 4} {:a 7} {:a 1}])) "sort 2")
+(assert (deep= @[1 2 3 4 5] (sorted [5 3 4 1 2])) "sort 3")
+(assert (deep= @[{:a 1} {:a 4} {:a 7}] (sorted-by |($ :a) [{:a 4} {:a 7} {:a 1}])) "sort 4")
+
 # Gensym tests
 
 (assert (not= (gensym) (gensym)) "two gensyms not equal")
 ((fn []
    (def syms (table))
-   (var count 0)
-   (while (< count 128)
+   (var numcount 0)
+   (while (< numcount 128)
      (put syms (gensym) true)
-     (set count (+ 1 count)))
+     (set numcount (+ 1 numcount)))
    (assert (= (length syms) 128) "many symbols")))
 
 # Let
@@ -313,6 +324,15 @@
 (assert (= x 0) "regression #137 (4)")
 (assert (= y 1) "regression #137 (5)")
 (assert (= z 2) "regression #137 (6)")
+
+(assert (= true ;(map truthy? [0 "" true @{} {} [] '()])) "truthy values")
+(assert (= false ;(map truthy? [nil false])) "non-truthy values")
+
+# Struct and Table duplicate elements
+(assert (= {:a 3 :b 2} {:a 1 :b 2 :a 3}) "struct literal duplicate keys")
+(assert (= {:a 3 :b 2} (struct :a 1 :b 2 :a 3)) "struct constructor duplicate keys")
+(assert (deep= @{:a 3 :b 2} @{:a 1 :b 2 :a 3}) "table literal duplicate keys")
+(assert (deep= @{:a 3 :b 2} (table :a 1 :b 2 :a 3)) "table constructor duplicate keys")
 
 (end-suite)
 

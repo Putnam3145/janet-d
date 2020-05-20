@@ -49,7 +49,7 @@ unittest
     import std.parallelism;
     import std.stdio;
     TaskPool ourPool = new TaskPool();
-    writeln("Testing parallelism (and hot-swapping, if you're fast)...");
+    writeln("Testing parallelism...");
     import std.file : readText;
     string memoizedString = readText("./source/tests/dtests/parallel.janet");
     foreach(int i;0..100_000)
@@ -60,6 +60,6 @@ unittest
         }
         ourPool.put(task!doString(memoizedString));
     }
-    ourPool.finish(true);
+    ourPool.finish();
     writeln("Parallelism test finished.");
 }

@@ -6,10 +6,6 @@ public import janet.c : Janet,JanetFunction,JanetTable,JanetKV;
 
 JanetTable* coreEnv; /// The core environment 
 
-import std.typecons : Nullable;
-
-package Nullable!(JanetFiber*,null) defaultFiber;
-
 version(JanetD_NoAutoInit) // Sometimes we might not want to start up a janet instance on every thread's creation
 {
     /**
@@ -48,35 +44,6 @@ enum JanetStrType
     KEYWORD
 }
 
-package struct JanetDAbstractHead(T)
-    if(is(T == class))
-{
-    JanetGCObject gc;
-    const(JanetAbstractType)* type;
-    size_t size;
-    union AbstractUnion
-    {
-        long[] fakeData;
-        T realData;
-    }
-    AbstractUnion data;
-    import janet.register : registerType;
-    void initialize(T dataArg)
-    {
-        type = registerType!T;
-        size = __traits(classInstanceSize,T);
-        data.realData = dataArg;
-    }
-    this(T dataArg)
-    {
-        initialize(dataArg);
-    }
-    void* ptr()
-    {
-        return cast(void*)&data;
-    }
-}
-
 /**
     Define an immutable value in Janet, as Janet's "def".
     Immutable means something slightly different in Janet than in D,
@@ -110,4 +77,9 @@ package struct JanetDAbstractHead(T)
 @nogc Janet get(T)(JanetKV* tbl,T key)
 {
     return janet_struct_get(tbl,janetWrap(key));
+}
+
+package struct JanetAbstractClassHelper(T)
+{
+    T obj;
 }

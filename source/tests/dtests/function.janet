@@ -1,4 +1,5 @@
 (import source/tests/helper :prefix "" :exit true)
+(print "Function test started.")
 (assert (cfunction? foo) "foo exists")
 (assert (cfunction? bar) "bar exists")
 (assert (= (foo 0) 1) "(foo 0) = 1")

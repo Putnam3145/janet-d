@@ -18,11 +18,7 @@ import janet;
     Janet j;
     enum argc = T.length;
     const(Janet*) argv = cast(const(Janet*))(wrappedArgs);
-    if(defaultFiber.isNull)
-    {
-        defaultFiber = janet_fiber(fun,128,argc,argv);
-    }
-    JanetFiber* fiber = janet_fiber_reset(defaultFiber.get,fun,argc,argv);
+    JanetFiber* fiber = janet_fiber_reset(janet_root_fiber().get,fun,argc,argv);
     fiber.table = janet_table(0);
     fiber.table.proto = coreEnv;
     const int result = janet_continue(fiber,janet_wrap_nil(),&j);
@@ -86,7 +82,6 @@ template makeJanetCFunc(alias func)
         return janet_wrap_nil();
     }
     alias JanetDFunction = SetFunctionAttributes!(JanetCFunction,"C",functionAttributes!func);
-    pragma(msg,__traits(identifier,func));
     JanetDFunction makeJanetCFunc()
     {
         return cast(JanetDFunction)(&ourJanetFunc);
@@ -103,13 +98,14 @@ import std.traits : isPointer,PointerTarget;
 template makeJanetCFunc(alias func,T)
     if(is(T == class) || isPointer!T && is(PointerTarget!T == struct))
 {
-    import std.traits : Parameters,ReturnType,isNestedFunction,arity;
+    import std.traits : Parameters,isNestedFunction,arity,functionAttributes,SetFunctionAttributes,FunctionTypeOf,ReturnType;
     import std.typecons : Tuple;
     T obj;
-    JanetCFunction makeJanetCFunc(T argObj)
+    alias JanetDFunction = SetFunctionAttributes!(JanetCFunction,"C",functionAttributes!func);
+    JanetDFunction makeJanetCFunc(T argObj)
     {
         obj = argObj;
-        return &ourJanetFunc;
+        return cast(JanetDFunction)(&ourJanetFunc);
     }
     extern(C) static Janet ourJanetFunc (int argc, Janet* argv)
     {

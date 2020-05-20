@@ -2,7 +2,7 @@ module janet.wrap;
 
 import janet.c;
 
-import janet : JanetDAbstractHead, JanetStrType;
+import janet : JanetStrType, JanetAbstractClassHelper;
 
 import std.meta : AliasSeq;
 
@@ -228,12 +228,6 @@ unittest
 
 /**
     Wraps a D value to a Janet value.
-    
-    Note that class wrapping specifically avoids the garbage collector, which means that
-    the memory must be managed manually. One can later call
-    free(janet_abstract_head(J)) on the Janet object J that this returns to free
-    the memory. Not doing so will lead to a 48 byte leak for each wrapped class.
-    Not using the garbage collector also makes wrapping classes unsafe.
 */
 @safe @nogc Janet janetWrap()
 {
@@ -332,10 +326,10 @@ unittest
     }
     else static if(is(T == class) || is(T == struct))
     {
-        import core.memory : pureMalloc;
-        JanetDAbstractHead!T* newAbstract = cast(JanetDAbstractHead!T*)pureMalloc(JanetDAbstractHead!(T).sizeof);
-        newAbstract.initialize(x);
-        return janet_wrap_abstract(newAbstract.ptr);
+        import janet.register : registerType;
+        auto data = cast(JanetAbstractClassHelper!T*)janet_abstract(registerType!T,JanetAbstractClassHelper!T.sizeof);
+        data.obj = x;
+        return janet_wrap_abstract(data);
     }
     else
     {
@@ -380,30 +374,6 @@ unittest
         janet_table_put(arr,janetWrap(key),wrjanetWrapap(value));
     }
     return janet_wrap_table(arr);
-}
-
-/// Frees a previously wrapped class.
-@nogc void freeWrappedClass(Janet abs)
-in
-{
-    assert(abs.janet_type==JanetType.JANET_ABSTRACT,"Tried freeing a non-abstract Janet!");
-}
-do
-{
-    import core.memory : pureFree;
-    pureFree(cast(void*)(abs.janet_unwrap_abstract.janet_abstract_head));
-}
-///
-unittest
-{
-    class SmallClass
-    {
-        int justAnInt = 4;
-    }
-    import core.memory : pureFree,pureMalloc;
-    auto boo = new SmallClass;
-    auto wrapped = janetWrap(boo);
-    freeWrappedClass(wrapped);
 }
 
 version(unittest)
