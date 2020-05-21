@@ -2,16 +2,23 @@
 	"authors": [
 		"Putnam"
 	],
+	"dependencies": {
+		"io": "~>0.2.5"
+	},
 	"description": "D bindings for the Janet programming language.",
-	"license": "MIT",
-	"name": "janet-d",
-	"targetType": "library",
-	"targetPath": "lib",
 	"importPaths": [
 		".",
 		"source",
 		"source/tests"
 	],
-	"sourceFiles-windows-x86_64": ["extlib/janet.obj"],
-	"sourceFiles-linux-x86_64": ["extlib/janet.o"]
+	"license": "MIT",
+	"name": "janet-d",
+	"sourceFiles-linux-x86_64": [
+		"extlib/janet.o"
+	],
+	"sourceFiles-windows-x86_64": [
+		"extlib/janet.obj"
+	],
+	"targetPath": "lib",
+	"targetType": "library"
 }

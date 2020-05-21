@@ -21,27 +21,34 @@ unittest
 {
     doString(`(print "doString unittest succeeded!")`);
 }
-/// Load a file and run it in the Janet VM. Not @nogc, due to readText.
-int doFile(string path,JanetTable* env = coreEnv)
+
+private static ubyte[0x10_0000] buffer;
+
+// Anyone got anything better than a static buffer? Maybe a way to add a setting to change the buffer?
+
+/// Load a file and run it in the Janet VM.
+@nogc int doFile(string path,JanetTable* env = coreEnv)
 {
-    import std.file : readText;
-    string str;
+    import std.io.file : File;
+    int len = 0;
     synchronized
     {
-        str = readText(path);
+        auto f = File(path);
+        len = cast(int)f.read(buffer);
     }
-    return doString(str,env);
+    return janet_dobytes(env,cast(ubyte*)buffer,len,"",null);
 }
 /// ditto
-int doFile(string path, Janet* out_, JanetTable* env = coreEnv)
+@nogc int doFile(string path, Janet* out_, JanetTable* env = coreEnv)
 {
-    import std.file : readText;
-    string str;
+    import std.io.file : File;
+    int len = 0;
     synchronized
     {
-        str = readText(path);
+        auto f = File(path);
+        len = cast(int)f.read(buffer);
     }
-    return doString(str,out_,env);
+    return janet_dobytes(env,cast(ubyte*)buffer,len,"",out_);
 }
 
 unittest
