@@ -25,7 +25,11 @@ import janet;
     debug assert(result==0,"Function errored! "~j.as!string);
     return j;
 }
-private Janet janetReturn(alias func,Args...)(Args args)
+
+import std.traits : functionAttributes, FunctionAttribute;
+
+private @nogc Janet janetReturn(alias func,Args...)(Args args)
+    if(functionAttributes!func & FunctionAttribute.nogc)
 {
     import std.traits : ReturnType;
     static if(is(ReturnType!func == void))
@@ -38,6 +42,22 @@ private Janet janetReturn(alias func,Args...)(Args args)
         return janetWrap!(ReturnType!func)(func(args));
     }
 }
+
+private Janet janetReturn(alias func,Args...)(Args args)
+    if(!(functionAttributes!func & FunctionAttribute.nogc))
+{
+    import std.traits : ReturnType;
+    static if(is(ReturnType!func == void))
+    {
+        func(args);
+        return janet_wrap_nil();
+    }
+    else
+    {
+        return janetWrap!(ReturnType!func)(func(args));
+    }
+}
+
 
 /**
     Wraps around a function, allowing it to be called in Janet.
