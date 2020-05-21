@@ -32,6 +32,19 @@ private template GetParameterToPropertyFunc(alias sym)
         }
     }
 }
+/**
+    This gives us the ability to take a D-initialized object and pass it to Janet without
+    moving any data around in particular. The void* should be a pointer given
+    by janet_unwrap_abstract on a Janet which was earlier made by janet_wrap_abstract
+    on an object of type T. It should be used in any static functions that will be
+    expected for registerType on the void* that's sent in.
+*/
+T getDataFromHelper(T)(void* data)
+{
+    // though to be honest this might actually be a fantastic misunderstanding/abuse of what abstract types are
+    auto helper = *cast(JanetAbstractClassHelper!T*) data;
+    return helper.obj;
+}
 
 private template defaultGetter(T)
 {
@@ -40,8 +53,7 @@ private template defaultGetter(T)
         import std.string : fromStringz;
         immutable string keyStr = (&key).as!(string,JanetStrType.KEYWORD);
         debug import std.stdio : writeln;
-        auto helper = *cast(JanetAbstractClassHelper!T*) data;
-        T realData = helper.obj;
+        T realData = getDataFromHelper!(T)(data);
         switch(keyStr)
         {
             static foreach(field; __traits(allMembers,T))
@@ -76,8 +88,7 @@ private template defaultPut(T)
     extern(C) void defaultPutFunc(void* data, Janet key, Janet value)
     {
         string keyStr = (&key).as!(string,JanetStrType.KEYWORD);
-        auto helper = *cast(JanetAbstractClassHelper!T*) data;
-        T realData = helper.obj;
+        T realData = getDataFromHelper!(T)(data);
         switch(keyStr)
         {
             static foreach(field; __traits(allMembers,T))
@@ -111,11 +122,39 @@ private template defaultPut(T)
     auto defaultPut = &defaultPutFunc;
 }
 
+private template janetHash(T)
+{
+    extern(C) int janetHashFunc(void* p, size_t len) 
+    {
+        T realData = getDataFromHelper!(T)(p);
+        return cast(int)((realData.toHash%uint.max)-int.max);
+    }
+    auto janetHash = &janetHashFunc;
+}
+
+private template janetCall(T)
+{
+    extern(C) Janet janetCallFunc (void* p, int argc, Janet* argv)
+    {
+        import std.traits : arity;
+        T realData = getDataFromHelper!(T)(p);
+        return makeJanetCFunc!(realData.opCall,T)(realData)(argc,argv);
+    }
+    auto janetCall = &janetCallFunc;
+}
+
+private template janetCompare(T)
+{
+    extern(C) int janetCompareFunc(void* lhs, void* rhs)
+    {
+        auto lHelper = *cast(JanetAbstractClassHelper!T*) lhs;
+        auto rHelper = *cast(JanetAbstractClassHelper!T*) rhs;
+        return lHelper.obj.opCmp(rHelper.obj);
+    }
+    auto janetCompare = &janetCompareFunc;
+}
+
 /** Allows one to register a JanetAbstractType with Janet.
-
-    The returned object can be used as an argument for the janet_abstract function, which will return a void*.
-
-    This void* can be safely(?) cast to T (TODO: prove safety, make function to ensure it if so).
 
     One can add static string to the class by the name of "janetPackage", which will be prepended to its class name in Janet before a '/'.
 
@@ -138,8 +177,12 @@ private template defaultPut(T)
     - int __janetGC (void* data, size_t len)
     
     - int __janetGCMark (void* data, size_t len)
+
+    - Janet __janetNext (void* data, Janet key)
+
+    - int __janetHash (void* p, size_t len)
     
-    All of these are optional; get and put will have defaults applied (see the source code for info) if none is defined.
+    All of these are optional; get, put and hash will have defaults applied (see the source code for info) if either is not defined. Compare and call are automatically generated for types with opCmp and opCall respectively.
 
 */
 @nogc const(JanetAbstractType)* registerType(T)()
@@ -197,10 +240,31 @@ private template defaultPut(T)
     {
         newType.tostring = &T.__janetToString;
     }
-    //I am *pretty* sure the below line keeps the allocated memory from leaking.
-    //it's 64 bytes per registered type though so it's probably irrelevant
+    static if(hasStaticMember!(T,"__janetNext"))
+    {
+        newType.next = &T.__janetNext;
+    }
+    static if(hasStaticMember!(T,"__janetHash"))
+    {
+        newType.hash = &T.__janetHash;
+    }
+    else
+    {
+        newType.hash = janetHash!T;
+    }
+    import std.traits : isCallable, isOrderingComparable;
+    static if(isCallable!T)
+    {
+        newType.call = janetCall!T;
+    }
+    static if(isOrderingComparable!T)
+    {
+        newType.compare = janetCompare!T;
+    }
     auto typePointer = cast(JanetAbstractType*)pureMalloc(JanetAbstractType.sizeof);
     *typePointer = newType;
+    //I am *pretty* sure the below line keeps the allocated memory from leaking.
+    //it's 64 bytes per registered type though so it's probably irrelevant
     janet_register_abstract_type(typePointer);
     return typePointer;
 }
