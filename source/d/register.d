@@ -257,7 +257,6 @@ unittest
     import std.stdio : writeln;
     writeln("Performing class register test.");
     TestClass baz = new TestClass();
-    writeln(cast(void*)baz);
     baz.a = 5;
     baz.b = "foobar";
     baz.bar.foo = 10;
