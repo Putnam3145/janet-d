@@ -51,19 +51,19 @@ enum JanetStrType
     Name and documentation should be string literals, or otherwise
     made to be zero-terminated outside of this.
 */
-@nogc void janetDef(T)(JanetTable* env,string name,T val,string documentation = "")
+@nogc void janetDef(T)(JanetTable* env,immutable(char)* name,T val,immutable(char)* documentation = "")
 {
     import janet.c : janet_def;
-    janet_def(env,cast(const(char*))name,janetWrap(val),cast(const(char*))documentation);
+    janet_def(env,name,janetWrap(val),documentation);
 }
 
 /**
     As janetDef, but value is mutable, as Janet's "var".
 */
-@nogc void janetVar(T)(JanetTable* env,string name,T val,string documentation = "")
+@nogc void janetVar(T)(JanetTable* env,immutable(char)* name,T val,immutable(char)* documentation = "")
 {
     import janet.c : janet_var;
-    janet_var(env,cast(const(char*))name,janetWrap(val),cast(const(char*))documentation);
+    janet_var(env,name,janetWrap(val),documentation);
 }
 
 /**
