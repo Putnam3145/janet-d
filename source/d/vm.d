@@ -22,19 +22,18 @@ unittest
     doString(`(print "doString unittest succeeded!")`);
 }
 
-private static ubyte[0x10_0000] buffer;
-
-// Anyone got anything better than a static buffer? Maybe a way to add a setting to change the buffer?
-
 /// Load a file and run it in the Janet VM.
 @nogc int doFile(string path,JanetTable* env = coreEnv)
 {
     import std.io.file : File;
+    import core.memory : pureMalloc, pureFree;
     int len = 0;
+    ubyte* buffer = cast(ubyte*)pureMalloc(ubyte.sizeof * 0x10_0000);
+    scope(exit) pureFree(buffer);
     synchronized
     {
         auto f = File(path);
-        len = cast(int)f.read(buffer);
+        len = cast(int)f.read(buffer[0..0x10_0000]);
     }
     return janet_dobytes(env,cast(ubyte*)buffer,len,"",null);
 }
@@ -42,11 +41,14 @@ private static ubyte[0x10_0000] buffer;
 @nogc int doFile(string path, Janet* out_, JanetTable* env = coreEnv)
 {
     import std.io.file : File;
+    import core.memory : pureMalloc, pureFree;
     int len = 0;
+    ubyte* buffer = cast(ubyte*)pureMalloc(ubyte.sizeof * 0x10_0000);
+    scope(exit) pureFree(buffer);
     synchronized
     {
         auto f = File(path);
-        len = cast(int)f.read(buffer);
+        len = cast(int)f.read(buffer[0..0x10_0000]);
     }
     return janet_dobytes(env,cast(ubyte*)buffer,len,"",out_);
 }
